@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:io';
 import 'event_model.dart';
 import 'file_storage.dart';
 import 'local_storage.dart';
 import 'toast_util.dart';
+import 'update_service.dart';
 
 class DataManagementPage extends StatefulWidget {
   const DataManagementPage({super.key});
@@ -18,11 +20,30 @@ class DataManagementPage extends StatefulWidget {
 class DataManagementPageState extends State<DataManagementPage> {
   Map<String, dynamic> _fileInfo = {};
   bool _isLoading = false;
+  String _currentVersion = '';
+  bool _hasUpdate = false;
+  static const MethodChannel _channel = MethodChannel('com.example.punch_card_app/installer');
 
   @override
   void initState() {
     super.initState();
     loadFileInfo();
+    _loadVersionInfo();
+  }
+
+  Future<void> _loadVersionInfo() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    setState(() {
+      _currentVersion = packageInfo.version;
+    });
+    
+    // 检查是否有新版本
+    final updateInfo = await UpdateService.checkForUpdate();
+    if (updateInfo != null && mounted) {
+      setState(() {
+        _hasUpdate = true;
+      });
+    }
   }
 
   Future<void> loadFileInfo() async {
@@ -32,16 +53,17 @@ class DataManagementPageState extends State<DataManagementPage> {
     });
   }
 
-  Future<void> _requestPermissions() async {
-    final status = await Permission.storage.request();
-    if (status.isGranted) {
-      showToast(context, '存储权限已授权');
-    } else {
-      showToast(context, '需要存储权限才能进行文件操作');
-    }
-  }
 
   Future<void> _exportData() async {
+    // Android 11+ 先检查权限，没有权限则弹框引导
+    if (Platform.isAndroid) {
+      final hasPermission = await _channel.invokeMethod('isManageStoragePermissionGranted');
+      if (hasPermission != true) {
+        _showPermissionDialog();
+        return;
+      }
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -62,6 +84,29 @@ class DataManagementPageState extends State<DataManagementPage> {
         _isLoading = false;
       });
     }
+  }
+
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('需要权限'),
+        content: Text('导出文件需要"所有文件访问"权限，请在设置中开启'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _channel.invokeMethod('requestManageStoragePermission');
+            },
+            child: Text('去设置'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _importData() async {
@@ -131,25 +176,6 @@ class DataManagementPageState extends State<DataManagementPage> {
     }
   }
 
-  Future<void> _backupData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final events = await LocalStorage.loadEvents();
-      await FileStorage.saveEventsToFile(events);
-      showToast(context, '数据备份成功');
-      loadFileInfo();
-    } catch (e) {
-      showToast(context, '备份失败: $e');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -191,7 +217,7 @@ class DataManagementPageState extends State<DataManagementPage> {
             ),
             SizedBox(height: 4),
             Text(
-              '备份、导出、导入您的数据',
+              '导出、导入您的数据',
               style: TextStyle(
                 fontSize: 12,
                 color: Color(0xFF9A9AB0),
@@ -323,16 +349,6 @@ class DataManagementPageState extends State<DataManagementPage> {
           children: [
             Expanded(
               child: _buildActionCard(
-                icon: Icons.backup,
-                title: '备份数据',
-                subtitle: '备份到本地文件',
-                onTap: _backupData,
-                color: Colors.green,
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: _buildActionCard(
                 icon: Icons.import_export,
                 title: '导出数据',
                 subtitle: '导出用于分享',
@@ -340,11 +356,7 @@ class DataManagementPageState extends State<DataManagementPage> {
                 color: Colors.blue,
               ),
             ),
-          ],
-        ),
-        SizedBox(height: 12),
-        Row(
-          children: [
+            SizedBox(width: 12),
             Expanded(
               child: _buildActionCard(
                 icon: Icons.file_download,
@@ -354,19 +366,118 @@ class DataManagementPageState extends State<DataManagementPage> {
                 color: Colors.orange,
               ),
             ),
+          ],
+        ),
+        SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildUpdateCard(),
+            ),
             SizedBox(width: 12),
             Expanded(
-              child: _buildActionCard(
-                icon: Icons.security,
-                title: '权限管理',
-                subtitle: '管理存储权限',
-                onTap: _requestPermissions,
-                color: Colors.purple,
-              ),
+              child: Container(), // 占位
             ),
           ],
         ),
       ],
+    );
+  }
+
+  /// 检查更新
+  Future<void> _checkUpdate() async {
+    showToast(context, '正在检查更新...');
+    
+    final updateInfo = await UpdateService.checkForUpdate();
+    
+    if (updateInfo != null && mounted) {
+      setState(() {
+        _hasUpdate = true;
+      });
+      UpdateService.showUpdateDialog(context, updateInfo);
+    } else if (mounted) {
+      setState(() {
+        _hasUpdate = false;
+      });
+      showToast(context, '当前已是最新版本');
+    }
+  }
+  
+  // 移除权限管理方法（Android 11+应用专属目录无需权限）
+
+  Widget _buildUpdateCard() {
+    return GestureDetector(
+      onTap: _checkUpdate,
+      child: Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Stack(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.system_update,
+                        size: 20,
+                        color: Colors.teal,
+                      ),
+                    ),
+                    if (_hasUpdate)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              '检查更新',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1A1A2E),
+              ),
+            ),
+            SizedBox(height: 2),
+            Text(
+              _currentVersion.isEmpty ? '加载中...' : 'V$_currentVersion',
+              style: TextStyle(
+                fontSize: 10,
+                color: _hasUpdate ? Colors.red : Color(0xFF9A9AB0),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

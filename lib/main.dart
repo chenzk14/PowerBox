@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'statistics_page.dart';
 import 'data_management_page.dart';
+import 'update_service.dart';
 
 void main() {
   runApp(MyApp());
@@ -49,6 +50,27 @@ class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
   final GlobalKey<StatisticsPageState> _statisticsKey = GlobalKey();
   final GlobalKey<DataManagementPageState> _dataKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    // 启动时自动检查更新
+    _checkUpdateOnStartup();
+  }
+
+  /// 启动时检查更新
+  void _checkUpdateOnStartup() async {
+    // 延迟2秒后检查，避免影响启动速度
+    await Future.delayed(Duration(seconds: 2));
+    
+    if (!mounted) return;
+    
+    final updateInfo = await UpdateService.checkForUpdate();
+    
+    if (updateInfo != null && mounted) {
+      UpdateService.showUpdateDialog(context, updateInfo);
+    }
+  }
 
   void _onTabChanged(int index) {
     if (index == _currentIndex) return;
@@ -114,10 +136,9 @@ class _MainPageState extends State<MainPage> {
     final isSelected = _currentIndex == index;
     return GestureDetector(
       onTap: () => _onTabChanged(index),
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 200),
-        margin: EdgeInsets.symmetric(horizontal: 4),
-        padding: EdgeInsets.symmetric(horizontal: isSelected ? 12 : 14, vertical: 8),
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 8),
+        padding: EdgeInsets.symmetric(horizontal: isSelected ? 20 : 24, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? Color(0xFF4A7CF7) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),

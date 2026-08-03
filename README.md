@@ -72,6 +72,10 @@ flutter run
 ```bash
 flutter build apk --release
 ```
+#### 打包时可以进一步压缩 APK 文件大小
+```bash
+flutter build apk --release --split-per-abi
+```
 
 ## 版本说明
 

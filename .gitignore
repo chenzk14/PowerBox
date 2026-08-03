@@ -18,10 +18,8 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VS Code
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -43,3 +41,50 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android build generated files
+/android/.gradle/
+/android/app/build/
+/android/build/
+/android/local.properties
+/android/key.properties
+/android/*.jks
+/android/*.keystore
+
+# Flutter build output
+/build/
+
+# Platform specific
+/android/.cxx/
+/android/gradlew
+/android/gradlew.bat
+/android/gradle/
+/android/gradle.properties
+
+# Generated pluginRegistrant
+/**/GeneratedPluginRegistrant.java
+/**/GeneratedPluginRegistrant.kt
+
+# Podfile (if not committed)
+/ios/Pods/
+/ios/.symlinks/
+
+# Web build
+/web/favicon.png
+/web/icons/
+/web/manifest.json
+
+# macOS
+/macos/Pods/
+/macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Windows
+/windows/flutter/ephemeral/
+
+# Linux
+/linux/flutter/ephemeral/
+
+# Environment variables
+.env
+.env.local
+.env.production

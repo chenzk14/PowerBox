@@ -6,64 +6,28 @@ import 'event_model.dart';
 class FileStorage {
   static const String _fileName = 'todo_data.json';
   static const String _backupFileName = 'todo_data_backup.json';
+  static const String _exportDirName = 'TodoList';
 
-  // 获取外部存储根目录
+  // 导出目录固定为 /storage/emulated/0/TodoList
+  static Future<Directory> get _exportDirectory async {
+    final dir = Directory('/storage/emulated/0/$_exportDirName');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return dir;
+  }
+
+  // 内部数据存储目录（应用专属）
   static Future<Directory> get _storageDirectory async {
     try {
-      // 优先使用外部存储目录
       final externalDir = await getExternalStorageDirectory();
       if (externalDir != null) {
-        // 从外部存储目录路径中提取根目录
-        // 例如：/storage/emulated/0/Android/data/com.example.app/files -> /storage/emulated/0
-        final path = externalDir.path;
-        print('外部存储目录路径: $path');
-        
-        // 查找 'Android' 目录的位置
-        final androidIndex = path.indexOf('/Android');
-        if (androidIndex > 0) {
-          final rootPath = path.substring(0, androidIndex);
-          final rootDir = Directory(rootPath);
-          print('提取的根目录路径: $rootPath');
-          
-          // 检查目录是否存在（根目录应该总是存在的）
-          if (await rootDir.exists()) {
-            return rootDir;
-          } else {
-            print('警告: 根目录不存在: $rootPath');
-          }
-        }
-        
-        // 如果找不到 Android 目录，尝试其他方法
-        // 查找 'emulated' 或 'sdcard'
-        final pathParts = path.split('/');
-        for (int i = 0; i < pathParts.length; i++) {
-          if (pathParts[i] == 'emulated' && i + 1 < pathParts.length) {
-            final rootPath = '/' + pathParts.sublist(0, i + 2).join('/');
-            final rootDir = Directory(rootPath);
-            if (await rootDir.exists()) {
-              print('通过 emulated 找到根目录: $rootPath');
-              return rootDir;
-            }
-          } else if (pathParts[i] == 'sdcard') {
-            final rootPath = '/' + pathParts.sublist(0, i + 1).join('/');
-            final rootDir = Directory(rootPath);
-            if (await rootDir.exists()) {
-              print('通过 sdcard 找到根目录: $rootPath');
-              return rootDir;
-            }
-          }
-        }
-        
-        // 如果都找不到，直接使用外部存储目录
-        print('使用外部存储目录作为根目录: ${externalDir.path}');
         return externalDir;
       }
     } catch (e) {
       print('获取外部存储目录失败: $e');
     }
-    // 如果外部存储不可用，使用应用文档目录
     final appDir = await getApplicationDocumentsDirectory();
-    print('回退到应用文档目录: ${appDir.path}');
     return appDir;
   }
 
@@ -182,7 +146,8 @@ class FileStorage {
   // 导出数据到指定文件（用于分享或备份）
   static Future<File> exportData(List<Event> events) async {
     try {
-      final directory = await _storageDirectory;
+      final directory = await _exportDirectory;
+      
       final exportFile = File('${directory.path}/todo_data_export_${DateTime.now().millisecondsSinceEpoch}.json');
       
       final eventList = events.map((event) => event.toJson()).toList();
@@ -197,7 +162,7 @@ class FileStorage {
       return exportFile;
     } catch (e) {
       print('导出数据失败: $e');
-      throw Exception('导出数据失败');
+      throw Exception('导出数据失败: $e');
     }
   }
 

@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 
+OverlayEntry? _currentEntry;
+
 void showToast(BuildContext context, String message) {
+  // 移除上一个toast，避免重叠
+  _currentEntry?.remove();
+  _currentEntry = null;
+
   final overlay = Overlay.of(context);
   late OverlayEntry entry;
   entry = OverlayEntry(
@@ -25,8 +31,12 @@ void showToast(BuildContext context, String message) {
     ),
   );
 
+  _currentEntry = entry;
   overlay.insert(entry);
   Future.delayed(Duration(milliseconds: 1500), () {
     entry.remove();
+    if (_currentEntry == entry) {
+      _currentEntry = null;
+    }
   });
 }
