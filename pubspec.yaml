@@ -1,7 +1,7 @@
 name: punch_card_app
 description: A new Flutter project.
 
-version: 1.0.10+22
+version: 1.0.11+23
 
 #x.y.z - 版本号（显示给用户）
 #n - 构建号（内部版本）
@@ -21,6 +21,8 @@ dependencies:
   http: ^1.1.0  # 用于网络请求检查更新
   open_file: ^3.3.2  # 用于打开APK文件安装
   package_info_plus: ^8.0.0  # 用于获取App版本信息
+  encrypt: ^5.0.3  # 用于密码加密存储
+  local_auth: ^2.3.0  # 用于本地生物识别/密码认证
 
 dev_dependencies:
   flutter_test:

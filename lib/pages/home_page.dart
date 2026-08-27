@@ -3,9 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'event_model.dart';
-import 'local_storage.dart';
-import 'toast_util.dart';
+import '../models/event_model.dart';
+import '../services/local_storage.dart';
+import '../utils/toast_util.dart';
 
 class HomePage extends StatefulWidget {
   @override

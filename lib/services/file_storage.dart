@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'event_model.dart';
+import '../models/event_model.dart';
 
 class FileStorage {
   static const String _fileName = 'todo_data.json';

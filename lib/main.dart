@@ -1,9 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'home_page.dart';
-import 'statistics_page.dart';
-import 'data_management_page.dart';
-import 'update_service.dart';
+import 'pages/home_page.dart';
+import 'pages/statistics_page.dart';
+import 'pages/data_management_page.dart';
+import 'services/update_service.dart';
 
 void main() {
   runApp(MyApp());

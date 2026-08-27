@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'event_model.dart';
+import '../models/event_model.dart';
 import 'file_storage.dart';
 
 class LocalStorage {

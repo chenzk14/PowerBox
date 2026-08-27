@@ -4,11 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:io';
-import 'event_model.dart';
-import 'file_storage.dart';
-import 'local_storage.dart';
-import 'toast_util.dart';
-import 'update_service.dart';
+import '../models/event_model.dart';
+import '../services/file_storage.dart';
+import '../services/local_storage.dart';
+import '../utils/toast_util.dart';
+import '../services/update_service.dart';
+import 'password_manager_page.dart';
 
 class DataManagementPage extends StatefulWidget {
   const DataManagementPage({super.key});
@@ -336,6 +337,8 @@ class DataManagementPageState extends State<DataManagementPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildPasswordManagerCard(),
+        SizedBox(height: 16),
         Text(
           '功能操作',
           style: TextStyle(
@@ -382,6 +385,82 @@ class DataManagementPageState extends State<DataManagementPage> {
         ),
       ],
     );
+  }
+
+  Widget _buildPasswordManagerCard() {
+    return GestureDetector(
+      onTap: _navigateToPasswordManager,
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Color(0xFF9C88FF).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.password_outlined,
+                size: 24,
+                color: Color(0xFF9C88FF),
+              ),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '密码管理',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1A2E),
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '安全存储账号密码，支持指纹/密码解锁',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF9A9AB0),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: Color(0xFF9A9AB0),
+              size: 24,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _navigateToPasswordManager() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PasswordManagerPage(),
+      ),
+    );
+    // 返回时刷新文件信息（如果有变化）
+    loadFileInfo();
   }
 
   /// 检查更新
