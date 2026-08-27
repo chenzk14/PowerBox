@@ -413,7 +413,7 @@ class DataManagementPageState extends State<DataManagementPage> {
               ),
               child: Icon(
                 Icons.password_outlined,
-                size: 24,
+                size: 16,
                 color: Color(0xFF9C88FF),
               ),
             ),
@@ -444,7 +444,7 @@ class DataManagementPageState extends State<DataManagementPage> {
             Icon(
               Icons.chevron_right,
               color: Color(0xFF9A9AB0),
-              size: 24,
+              size: 16,
             ),
           ],
         ),
