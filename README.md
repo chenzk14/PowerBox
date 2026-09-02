@@ -1,89 +1,97 @@
-# 一键打卡 App
-
-Flutter 打卡应用，支持日历视图、数据统计、数据管理和密码本地管理。
-
+# PowerBox
 **软件预览**：[查看设计稿](https://www.kdocs.cn/l/crDSV8PhJBoh)
 
-## 功能特性
+## 为什么做这个工具集
 
-### 首页
-- **一键打卡** - 点击按钮快速记录打卡事件，支持同一日期多次打卡
-- **日历视图** - 中文星期显示，点击时间区域可快速切换年月
-- **事件统计** - 显示当月打卡次数及与上月对比
-- **实时时间** - 显示当前日期和时间
+### 痛点对比
 
-### 统计页面
-- **年度统计** - 平滑折线图展示每月打卡趋势
-- **月度详情** - 显示各日期打卡次数（如"5（4次）"）
-- **年份切换** - 水平滑动选择不同年份
+| 场景 | 现有工具的问题 | PowerBox 的解决方式 |
+|------|---------------|-------------------|
+| 打卡 | 功能臃肿、广告泛滥、注册繁琐、社交模块捆绑 | 一键点击即打卡，零步骤，零干扰 |
+| 密码管理 | 云同步工具需联网，开源方案界面反人类，隐私无保障 | 本地 AES-256 加密存储，零网络请求，生物识别解锁 |
+| 数据隐私 | 多数工具将数据上传服务器 | 全部数据本地存储，不上传任何服务器 |
 
-### 数据管理
-- **数据备份** - 将数据备份到本地文件
-- **数据导出** - 导出 JSON 格式文件用于分享
-- **数据导入** - 从 JSON 文件导入数据
-- **权限管理** - 管理存储权限
-- **密码管理** - 安全存储账号密码，支持生物识别/设备解锁认证
-  - 卡片式列表，点击展开查看账号/密码详情
-  - 顶部搜索栏，支持按名称搜索
-  - 右滑快捷复制，左滑删除记录
-  - 账号密码 AES-256 加密本地存储
+### 核心理念
 
-### 密码管理
-- **安全认证** - 支持指纹、面容 ID、PIN 码、图案解锁（未设置锁屏时自动跳过）
-- **加密存储** - 使用 AES-CBC 模式加密，密钥安全生成并持久化
-- **交互优化** - 卡片展开动画、左滑删除确认、右滑快速复制、实时搜索过滤
+| 维度 | 描述 |
+|------|------|
+| 打卡 | 最简单的操作方式——点击按钮，完成打卡 |
+| 密码管理 | 最简洁的交互——展开才显示，收起即保护 |
+| 隐私 | 全部本地，不上网，不收集，不跟踪 |
+| 安全 | AES-256-CBC 加密 + 生物识别/设备凭据认证 |
+
+## 功能概览
+
+### 两大核心模块
+
+| 模块 | 定位 | 核心能力 |
+|------|------|---------|
+| 一键打卡 | 快速记录每日事件 | 点击即打卡、日历视图、月度/年度统计、事件管理 |
+| 密码管理器 | 安全存储账号密码 | AES-256 加密、生物识别解锁、卡片式管理、搜索过滤 |
+
+## 设计原则
+
+| 原则 | 说明 |
+|------|------|
+| 极简 | 首页只有一个按钮，打卡只需一次点击；密码管理卡片式交互，展开才显示敏感信息，收起即保护隐私；无冗余步骤，无多余信息干扰 |
+| 隐私优先 | 全部数据本地存储，不上传任何服务器；零网络请求（版本检查除外），完全离线可用；密码数据 AES-256-CBC 加密后存储于 SharedPreferences；加密密钥由系统安全随机生成，不硬编码 |
+| 安全 | 生物识别/设备凭据认证后才能访问密码管理；支持指纹、面容 ID、PIN 码、图案解锁多种认证方式；未设置锁屏的设备自动跳过认证，不阻塞使用；密码输入支持遮蔽显示，防止旁人窥视 |
+| 纯粹 | MIT 开源许可证，完全免费；无广告，无跟踪，无数据分析；不请求无关权限|
 
 ## 技术栈
 
-- Flutter 3.0+
-- Dart 3.0+
-- Syncfusion Flutter Charts - 折线图展示
-- Table Calendar - 日历组件
-- Shared Preferences - 本地数据存储
-- Path Provider - 文件路径管理
-- File Picker - 文件选择器
-- Permission Handler - 权限管理
-- **encrypt** - AES 加密存储
-- **local_auth** - 生物识别/设备凭据认证
+| 类别 | 工具/库 | 用途 |
+|------|---------|------|
+| 框架 | Flutter 3.0+ / Dart 3.0+ | 应用开发 |
+| 图表 | Syncfusion Flutter Charts | 年度打卡折线图 |
+| 日历 | Table Calendar | 日历视图组件 |
+| 存储 | Shared Preferences | 本地数据存储 |
+| 文件 | Path Provider / File Picker | 文件路径管理与选择 |
+| 加密 | encrypt | AES-256-CBC 密码加密 |
+| 认证 | local_auth | 指纹/面容 ID/设备凭据认证 |
+| 权限 | Permission Handler | 存储权限管理 |
+| 更新 | http / package_info_plus | 版本检查与信息获取 |
 
 ## 项目结构
 
 ```
 lib/
-├── main.dart                 # 应用入口与底部导航
-├── models/                   # 数据模型
-│   ├── event_model.dart      # 事件数据模型
-│   └── password_model.dart   # 密码条目数据模型
-├── services/                 # 业务服务层
-│   ├── local_storage.dart    # 本地存储管理
-│   ├── file_storage.dart     # 文件存储管理
-│   ├── password_storage.dart # 密码加密存储
-│   └── update_service.dart   # 版本更新检查
-├── pages/                    # 页面组件
-│   ├── home_page.dart            # 首页（打卡页面）
-│   ├── statistics_page.dart      # 统计页面
-│   ├── data_management_page.dart # 数据管理页面
-│   ├── password_manager_page.dart # 密码管理页面
-│   └── add_password_page.dart    # 添加/编辑密码页面
-└── utils/                    # 工具类
-    └── toast_util.dart       # Toast 提示工具
+├── main.dart                      # 应用入口与底部导航
+├── models/
+│   ├── event_model.dart         # 事件数据模型
+│   └── password_model.dart      # 密码条目数据模型
+├── services/
+│   ├── local_storage.dart       # 本地存储管理
+│   ├── file_storage.dart        # 文件存储管理
+│   ├── password_storage.dart    # 密码加密存储
+│   └── update_service.dart      # 版本更新检查
+├── pages/
+│   ├── home_page.dart               # 首页（打卡页面）
+│   ├── statistics_page.dart         # 统计页面
+│   ├── data_management_page.dart    # 数据管理页面
+│   └── password_manager_page.dart   # 密码管理页面
+└── utils/
+    └── toast_util.dart          # Toast 提示工具
 ```
 
 ## 安装运行
 
 1. 确保已安装 Flutter SDK
 2. 克隆项目：
+
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/chenzk14/todo_list_app.git
 cd todo_list_app
 ```
 
 3. 安装依赖：
+
 ```bash
 flutter pub get
 ```
 
 4. 运行应用：
+
 ```bash
 flutter run
 ```
@@ -93,19 +101,22 @@ flutter run
 ```bash
 flutter build apk --release
 ```
-#### 打包时可以进一步压缩 APK 文件大小
+
+打包时可以进一步压缩 APK 文件大小：
+
 ```bash
 flutter build apk --release --split-per-abi
 ```
 
 ## 版本说明
 
-版本号格式：`x.y.z+n`
-- `x.y.z` - 版本号（显示给用户）
-- `n` - 构建号（内部版本）
+| 项 | 值 |
+|----|-----|
+| 格式 | `x.y.z+n` |
+| `x.y.z` | 版本号（显示给用户） |
+| `n` | 构建号（内部版本） |
+| 当前版本 | 1.0.13+25 |
 
-每次发布新版需手动修改 `pubspec.yaml` 中的 `version` 字段。
-
-## 许可证
+## 许可
 
 MIT License

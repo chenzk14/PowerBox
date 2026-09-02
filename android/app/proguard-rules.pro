@@ -7,7 +7,7 @@
 -keep class io.flutter.plugins.**  { *; }
 
 # 保留实体类
--keep class com.example.todo_list_app.** { *; }
+-keep class com.powerbox.app.** { *; }
 
 # 保持 Serializable 不被混淆
 -keepclassmembers class * implements java.io.Serializable {

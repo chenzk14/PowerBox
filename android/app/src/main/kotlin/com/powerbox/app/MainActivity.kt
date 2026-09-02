@@ -1,4 +1,4 @@
-package com.example.todo_list_app
+package com.powerbox.app
 
 import android.content.Intent
 import android.net.Uri
@@ -11,7 +11,7 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
 class MainActivity : FlutterFragmentActivity() {
-    private val CHANNEL = "com.example.punch_card_app/installer"
+    private val CHANNEL = "com.powerbox.app/installer"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

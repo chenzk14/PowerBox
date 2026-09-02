@@ -1,15 +1,15 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'dart:io';
 import '../models/event_model.dart';
 import '../services/file_storage.dart';
 import '../services/local_storage.dart';
 import '../utils/toast_util.dart';
 import '../services/update_service.dart';
 import 'password_manager_page.dart';
+import '../services/password_storage.dart';
 
 class DataManagementPage extends StatefulWidget {
   const DataManagementPage({super.key});
@@ -23,8 +23,6 @@ class DataManagementPageState extends State<DataManagementPage> {
   bool _isLoading = false;
   String _currentVersion = '';
   bool _hasUpdate = false;
-  static const MethodChannel _channel = MethodChannel('com.example.punch_card_app/installer');
-
   @override
   void initState() {
     super.initState();
@@ -56,27 +54,16 @@ class DataManagementPageState extends State<DataManagementPage> {
 
 
   Future<void> _exportData() async {
-    // Android 11+ 先检查权限，没有权限则弹框引导
-    if (Platform.isAndroid) {
-      final hasPermission = await _channel.invokeMethod('isManageStoragePermissionGranted');
-      if (hasPermission != true) {
-        _showPermissionDialog();
-        return;
-      }
-    }
-
     setState(() {
       _isLoading = true;
     });
-
     try {
       final events = await LocalStorage.loadEvents();
       if (events.isEmpty) {
         showToast(context, '没有数据可以导出');
         return;
       }
-
-      final exportFile = await FileStorage.exportData(events);
+      final exportFile = await FileStorage.exportDataToInternalStorage(events);
       showToast(context, '数据已导出到: ${exportFile.path}');
     } catch (e) {
       showToast(context, '导出失败: $e');
@@ -85,29 +72,6 @@ class DataManagementPageState extends State<DataManagementPage> {
         _isLoading = false;
       });
     }
-  }
-
-  void _showPermissionDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('需要权限'),
-        content: Text('导出文件需要"所有文件访问"权限，请在设置中开启'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('取消'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _channel.invokeMethod('requestManageStoragePermission');
-            },
-            child: Text('去设置'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _importData() async {
@@ -170,6 +134,115 @@ class DataManagementPageState extends State<DataManagementPage> {
       }
     } catch (e) {
       showToast(context, '导入失败: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showExportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('导出数据'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.event, color: Color(0xFF4A7CF7)),
+              title: Text('打卡数据'),
+              subtitle: Text('导出事件记录为 JSON 文件'),
+              onTap: () {
+                Navigator.pop(context);
+                _exportData();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.vpn_key, color: Color(0xFF9C88FF)),
+              title: Text('密码数据'),
+              subtitle: Text('导出加密后的密码数据及密钥'),
+              onTap: () {
+                Navigator.pop(context);
+                _exportPasswordData();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showImportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('导入数据'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.event, color: Color(0xFF4A7CF7)),
+              title: Text('打卡数据'),
+              subtitle: Text('从 JSON 文件导入事件记录'),
+              onTap: () {
+                Navigator.pop(context);
+                _importData();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.vpn_key, color: Color(0xFF9C88FF)),
+              title: Text('密码数据'),
+              subtitle: Text('从加密文件导入密码数据及密钥'),
+              onTap: () {
+                Navigator.pop(context);
+                _importPasswordData();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportPasswordData() async {
+    try {
+      final data = await PasswordStorage.exportPasswordData();
+      final exportFile = await FileStorage.exportPasswordDataToInternalStorage(data);
+      showToast(context, '密码数据已导出到: ${exportFile.path}');
+    } catch (e) {
+      showToast(context, '导出密码数据失败: $e');
+    }
+  }
+
+  Future<void> _importPasswordData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+      );
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        if (file.path != null) {
+          final contents = await File(file.path!).readAsString();
+          final data = jsonDecode(contents) as Map<String, dynamic>;
+          if (!data.containsKey('passwords') ||
+              !data.containsKey('encryptionKey') ||
+              !data.containsKey('encryptionIv')) {
+            showToast(context, '文件格式不正确');
+            return;
+          }
+          await PasswordStorage.importPasswordData(data);
+          showToast(context, '密码数据导入成功');
+        } else {
+          showToast(context, '无法读取文件内容');
+        }
+      }
+    } catch (e) {
+      showToast(context, '导入密码数据失败: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -355,7 +428,7 @@ class DataManagementPageState extends State<DataManagementPage> {
                 icon: Icons.import_export,
                 title: '导出数据',
                 subtitle: '导出用于分享',
-                onTap: _exportData,
+                onTap: _showExportDialog,
                 color: Colors.blue,
               ),
             ),
@@ -365,7 +438,7 @@ class DataManagementPageState extends State<DataManagementPage> {
                 icon: Icons.file_download,
                 title: '导入数据',
                 subtitle: '从文件导入',
-                onTap: _importData,
+                onTap: _showImportDialog,
                 color: Colors.orange,
               ),
             ),

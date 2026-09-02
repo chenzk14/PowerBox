@@ -1,7 +1,7 @@
-name: punch_card_app
+name: com.powerbox.app
 description: A new Flutter project.
 
-version: 1.0.12+24
+version: 1.0.15+27
 
 #x.y.z - 版本号（显示给用户）
 #n - 构建号（内部版本）

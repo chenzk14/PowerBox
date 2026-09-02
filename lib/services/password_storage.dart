@@ -93,4 +93,22 @@ class PasswordStorage {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_passwordsKey);
   }
+
+  static Future<Map<String, String>> exportPasswordData() async {
+    await _initialize();
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'passwords': prefs.getString(_passwordsKey) ?? '',
+      'encryptionKey': prefs.getString(_encryptionKeyKey) ?? '',
+      'encryptionIv': prefs.getString(_encryptionIvKey) ?? '',
+    };
+  }
+
+  static Future<void> importPasswordData(Map<String, dynamic> data) async {
+    await _initialize();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_passwordsKey, data['passwords'] ?? '');
+    await prefs.setString(_encryptionKeyKey, data['encryptionKey'] ?? '');
+    await prefs.setString(_encryptionIvKey, data['encryptionIv'] ?? '');
+  }
 }

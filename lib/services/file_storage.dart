@@ -143,6 +143,74 @@ class FileStorage {
     }
   }
 
+  // 导出密码数据到应用内部存储目录（无需外部存储权限）
+  static Future<File> exportPasswordDataToInternalStorage(Map<String, String> data) async {
+    try {
+      final directory = await _storageDirectory;
+      final exportDir = Directory('${directory.path}/TodoList');
+      if (!await exportDir.exists()) {
+        await exportDir.create(recursive: true);
+      }
+      final exportFile = File('${exportDir.path}/password_data_export_${DateTime.now().millisecondsSinceEpoch}.json');
+      final jsonData = json.encode({
+        'version': '1.0',
+        'exportedAt': DateTime.now().toIso8601String(),
+        'passwords': data['passwords'],
+        'encryptionKey': data['encryptionKey'],
+        'encryptionIv': data['encryptionIv'],
+      });
+      await exportFile.writeAsString(jsonData);
+      return exportFile;
+    } catch (e) {
+      print('导出密码数据失败: $e');
+      throw Exception('导出密码数据失败: $e');
+    }
+  }
+
+  // 导出密码数据到指定文件（加密数据+密钥+IV）
+  static Future<File> exportPasswordDataToFile(Map<String, String> data) async {
+    try {
+      final directory = await _exportDirectory;
+      final exportFile = File('${directory.path}/password_data_export_${DateTime.now().millisecondsSinceEpoch}.json');
+      final jsonData = json.encode({
+        'version': '1.0',
+        'exportedAt': DateTime.now().toIso8601String(),
+        'passwords': data['passwords'],
+        'encryptionKey': data['encryptionKey'],
+        'encryptionIv': data['encryptionIv'],
+      });
+      await exportFile.writeAsString(jsonData);
+      return exportFile;
+    } catch (e) {
+      print('导出密码数据失败: $e');
+      throw Exception('导出密码数据失败: $e');
+    }
+  }
+
+  // 导出打卡数据到应用内部存储目录（无需外部存储权限）
+  static Future<File> exportDataToInternalStorage(List<Event> events) async {
+    try {
+      final directory = await _storageDirectory;
+      final exportDir = Directory('${directory.path}/TodoList');
+      if (!await exportDir.exists()) {
+        await exportDir.create(recursive: true);
+      }
+      final exportFile = File('${exportDir.path}/todo_data_export_${DateTime.now().millisecondsSinceEpoch}.json');
+      final eventList = events.map((event) => event.toJson()).toList();
+      final jsonData = json.encode({
+        'version': '1.0',
+        'exportedAt': DateTime.now().toIso8601String(),
+        'totalEvents': events.length,
+        'events': eventList,
+      });
+      await exportFile.writeAsString(jsonData);
+      return exportFile;
+    } catch (e) {
+      print('导出数据失败: $e');
+      throw Exception('导出数据失败: $e');
+    }
+  }
+
   // 导出数据到指定文件（用于分享或备份）
   static Future<File> exportData(List<Event> events) async {
     try {

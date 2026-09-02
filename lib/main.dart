@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '日历 APP',
+      title: 'PowerBox',
       theme: ThemeData(
         primaryColor: Color(0xFF4A7CF7),
         colorScheme: ColorScheme.fromSeed(

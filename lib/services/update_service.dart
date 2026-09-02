@@ -17,7 +17,7 @@ class UpdateService {
       'https://api.github.com/repos/$_owner/$_repo/releases/latest';
   
   // MethodChannel for Android native code
-  static const MethodChannel _channel = MethodChannel('com.example.punch_card_app/installer');
+  static const MethodChannel _channel = MethodChannel('com.powerbox.app/installer');
 
   /// 检查是否有新版本
   /// 返回null表示没有更新，返回Map表示有更新
