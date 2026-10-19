@@ -67,7 +67,7 @@ lib/
 
 ```bash
 git clone https://github.com/chenzk14/PowerBox.git
-cd todo_list_app
+cd PowerBox
 ```
 
 3. 安装依赖：
