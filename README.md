@@ -66,7 +66,7 @@ lib/
 2. 克隆项目：
 
 ```bash
-git clone https://github.com/chenzk14/todo_list_app.git
+git clone https://github.com/chenzk14/PowerBox.git
 cd todo_list_app
 ```
 
