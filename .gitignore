@@ -4,6 +4,9 @@
 *.pyc
 *.swp
 .DS_Store
+Thumbs.db
+desktop.ini
+*.hprof
 .atom/
 .build/
 .buildlog/
@@ -30,6 +33,8 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/coverage/
+.fvm/
 
 # Symbolication related
 app.*.symbols
@@ -44,22 +49,25 @@ app.*.map.json
 
 # Android build generated files
 /android/.gradle/
+/android/.kotlin/
 /android/app/build/
 /android/build/
 /android/local.properties
 /android/key.properties
-/android/*.jks
-/android/*.keystore
+*.jks
+*.keystore
 
 # Flutter build output
-/build/
+# 根目录 build/ 已在上方 Flutter/Dart/Pub related 中统一忽略，此处不再重复声明
 
 # Platform specific
 /android/.cxx/
+/android/app/.cxx/
+# Gradle wrapper：gradle-wrapper.properties 需要提交以锁定 Gradle 版本，
+# jar 与启动脚本由 Flutter 在构建时自动生成，因此不纳入版本控制
+/android/gradle/wrapper/gradle-wrapper.jar
 /android/gradlew
 /android/gradlew.bat
-/android/gradle/
-/android/gradle.properties
 
 # Generated pluginRegistrant
 /**/GeneratedPluginRegistrant.java

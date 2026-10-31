@@ -93,7 +93,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF5F6FA),
+      backgroundColor: Color(0xFFF5F5F5),
       body: SafeArea(
         child: Column(
           children: [
@@ -115,28 +115,55 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
     return Container(
       padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '打卡统计',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A2E),
+          // 返回按钮：从首页进入时显示
+//           if (Navigator.canPop(context)) ...[
+//             GestureDetector(
+//               onTap: () => Navigator.pop(context),
+//               child: Container(
+//                 margin: EdgeInsets.only(right: 10),
+//                 padding: EdgeInsets.all(6),
+//                 decoration: BoxDecoration(
+//                   color: Colors.white,
+//                   borderRadius: BorderRadius.circular(8),
+//                   boxShadow: [
+//                     BoxShadow(
+//                       color: Colors.black.withValues(alpha: 0.04),
+//                       blurRadius: 6,
+//                       offset: Offset(0, 2),
+//                     ),
+//                   ],
+//                 ),
+//                 child: Icon(
+//                   Icons.arrow_back_ios_new,
+//                   size: 16,
+//                   color: Color(0xFF333333),
+//                 ),
+//               ),
+//             ),
+//           ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '统计详情',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF333333),
+                  ),
                 ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                '查看打卡统计数据',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF9A9AB0),
-                ),
-              ),
-            ],
+                SizedBox(height: 4),
+//                 Text(
+//                   '查看打卡统计数据',
+//                   style: TextStyle(
+//                     fontSize: 12,
+//                     color: Color(0xFF999999),
+//                   ),
+//                 ),
+              ],
+            ),
           ),
         ],
       ),
@@ -152,13 +179,13 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: Color(0xFF4A7CF7).withValues(alpha: 0.1),
+              color: Color(0xFF333333).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.bar_chart_rounded,
               size: 40,
-              color: Color(0xFF4A7CF7),
+              color: Color(0xFF333333),
             ),
           ),
           SizedBox(height: 24),
@@ -167,7 +194,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A2E),
+              color: Color(0xFF333333),
             ),
           ),
           SizedBox(height: 8),
@@ -175,7 +202,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
             '开始打卡后即可查看统计信息',
             style: TextStyle(
               fontSize: 15,
-              color: Color(0xFF9A9AB0),
+              color: Color(0xFF999999),
             ),
           ),
         ],
@@ -188,7 +215,8 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
       children: [
         Container(
           height: 34,
-          margin: EdgeInsets.fromLTRB(20, 16, 20, 0),
+          // 底部留出与下方内容之间的间距
+          margin: EdgeInsets.fromLTRB(20, 16, 20, 12),
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: _existingYears.length,
@@ -205,22 +233,19 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
                   height: 34,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: isSelected ? Color(0xFF4A7CF7) : Colors.white,
+                    color: isSelected ? Color(0xFF333333) : Colors.white,
                     borderRadius: BorderRadius.circular(90),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+                    // 黑底选中态不加边框，白底未选中态用细边框代替阴影
+                    border: isSelected
+                        ? null
+                        : Border.all(color: Color(0xFFE1E1E1)),
                   ),
                   child: Text(
                     '$year年',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : Color(0xFF1A1A2E),
+                      color: isSelected ? Colors.white : Color(0xFF333333),
                     ),
                   ),
                 ),
@@ -234,7 +259,8 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
             children: _existingYears.map((year) {
               return SingleChildScrollView(
                 physics: BouncingScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(20, 20, 20, 100),
+                // 顶部不再额外留白，由年份切换条自身的底部间距控制
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 100),
                 child: Column(
                   children: [
                     _buildYearSummaryCard(year),
@@ -262,13 +288,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: Color(0xFFE1E1E1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,13 +301,13 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.calendar_month_outlined, size: 16, color: Color(0xFF4A7CF7)),
+                      Icon(Icons.calendar_month_outlined, size: 16, color: Color(0xFF333333)),
                       SizedBox(width: 4),
                       Text(
                         '${year}年总计',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF9A9AB0),
+                          color: Color(0xFF999999),
                         ),
                       ),
                     ],
@@ -298,7 +318,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A2E),
+                      color: Color(0xFF333333),
                     ),
                   ),
                 ],
@@ -306,13 +326,13 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
               Container(
                 padding: EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Color(0xFF4A7CF7).withValues(alpha: 0.1),
+                  color: Color(0xFF333333).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   Icons.insights_outlined,
                   size: 22,
-                  color: Color(0xFF4A7CF7),
+                  color: Color(0xFF333333),
                 ),
               ),
             ],
@@ -325,15 +345,15 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
               primaryXAxis: CategoryAxis(
                 majorGridLines: MajorGridLines(width: 0),
                 axisLine: AxisLine(width: 0),
-                labelStyle: TextStyle(fontSize: 10, color: Color(0xFF9A9AB0)),
+                labelStyle: TextStyle(fontSize: 10, color: Color(0xFF999999)),
               ),
               primaryYAxis: NumericAxis(
                 majorGridLines: MajorGridLines(
-                  color: Color(0xFFF5F6FA),
+                  color: Color(0xFFF5F5F5),
                   width: 1,
                 ),
                 axisLine: AxisLine(width: 0),
-                labelStyle: TextStyle(fontSize: 10, color: Color(0xFF9A9AB0)),
+                labelStyle: TextStyle(fontSize: 10, color: Color(0xFF999999)),
               ),
               tooltipBehavior: TooltipBehavior(
                 enable: true,
@@ -345,7 +365,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
                   dataSource: chartData,
                   xValueMapper: (_ChartData data, _) => data.month,
                   yValueMapper: (_ChartData data, _) => data.count,
-                  color: Color(0xFF4A7CF7),
+                  color: Color(0xFF333333),
                   width: 2,
                   animationDuration: 300,
                   splineType: SplineType.natural,
@@ -353,7 +373,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
                     isVisible: true,
                     height: 6,
                     width: 6,
-                    borderColor: Color(0xFF4A7CF7),
+                    borderColor: Color(0xFF333333),
                     borderWidth: 2,
                     color: Colors.white,
                   ),
@@ -378,13 +398,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: Color(0xFFE1E1E1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,7 +408,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: Color(0xFF333333),
             ),
           ),
           SizedBox(height: 12),
@@ -428,7 +442,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
           : BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: Color(0xFFF5F6FA),
+                  color: Color(0xFFF5F5F5),
                   width: 1,
                 ),
               ),
@@ -440,8 +454,8 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
             height: 36,
             decoration: BoxDecoration(
               color: totalEvents > 0
-                  ? Color(0xFF4A7CF7).withValues(alpha: 0.1)
-                  : Color(0xFFF5F6FA),
+                  ? Color(0xFF333333).withValues(alpha: 0.1)
+                  : Color(0xFFF5F5F5),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
@@ -450,7 +464,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
-                  color: totalEvents > 0 ? Color(0xFF4A7CF7) : Color(0xFF9A9AB0),
+                  color: totalEvents > 0 ? Color(0xFF333333) : Color(0xFF999999),
                 ),
               ),
             ),
@@ -465,7 +479,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF1A1A2E),
+                    color: Color(0xFF333333),
                   ),
                 ),
                 if (sortedDays.isNotEmpty) ...[
@@ -474,7 +488,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
                     '打卡日期：$daysText',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF9A9AB0),
+                      color: Color(0xFF999999),
                     ),
                   ),
                 ],
@@ -485,8 +499,8 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
             padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: totalEvents > 0
-                  ? Color(0xFF4A7CF7).withValues(alpha: 0.1)
-                  : Color(0xFFF5F6FA),
+                  ? Color(0xFF333333).withValues(alpha: 0.1)
+                  : Color(0xFFF5F5F5),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -494,7 +508,7 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
-                color: totalEvents > 0 ? Color(0xFF4A7CF7) : Color(0xFF9A9AB0),
+                color: totalEvents > 0 ? Color(0xFF333333) : Color(0xFF999999),
               ),
             ),
           ),

@@ -219,13 +219,13 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Color(0xFF4A7CF7).withValues(alpha: 0.1),
+                color: Color(0xFF333333).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.system_update,
                 size: 32,
-                color: Color(0xFF4A7CF7),
+                color: Color(0xFF333333),
               ),
             ),
             SizedBox(height: 16),
@@ -236,7 +236,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A2E),
+                color: Color(0xFF333333),
               ),
             ),
             SizedBox(height: 8),
@@ -245,7 +245,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Color(0xFF4A7CF7).withValues(alpha: 0.1),
+                color: Color(0xFF333333).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -253,7 +253,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF4A7CF7),
+                  color: Color(0xFF333333),
                 ),
               ),
             ),
@@ -266,7 +266,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                 width: double.maxFinite,
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Color(0xFFF5F6FA),
+                  color: Color(0xFFF5F5F5),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -287,7 +287,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                   LinearProgressIndicator(
                     value: _progress,
                     backgroundColor: Color(0xFFE0E0E0),
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4A7CF7)),
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF333333)),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   SizedBox(height: 8),
@@ -295,7 +295,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                     _status,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF9A9AB0),
+                      color: Color(0xFF999999),
                     ),
                   ),
                 ],
@@ -311,7 +311,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                     onPressed: _isDownloading ? null : () => Navigator.pop(context),
                     child: Text(
                       '稍后更新',
-                      style: TextStyle(color: Color(0xFF9A9AB0)),
+                      style: TextStyle(color: Color(0xFF999999)),
                     ),
                   ),
                 ),
@@ -320,7 +320,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                   child: ElevatedButton(
                     onPressed: _isDownloading ? null : _startDownload,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF4A7CF7),
+                      backgroundColor: Color(0xFF333333),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),

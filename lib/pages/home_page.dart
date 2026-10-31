@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../models/event_model.dart';
 import '../services/local_storage.dart';
 import '../utils/toast_util.dart';
+import 'statistics_page.dart';
+import 'data_management_page.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -17,8 +18,6 @@ class _HomePageState extends State<HomePage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   List<Event> _events = [];
-  late Timer _timer;
-  DateTime _currentTime = DateTime.now();
 
   void _showMonthPicker() async {
     int selectedYear = _focusedDay.year;
@@ -41,7 +40,7 @@ class _HomePageState extends State<HomePage> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A2E),
+                        color: Color(0xFF333333),
                       ),
                     ),
                     SizedBox(height: 20),
@@ -54,12 +53,12 @@ class _HomePageState extends State<HomePage> {
                               selectedYear--;
                             });
                           },
-                          icon: Icon(Icons.chevron_left, color: Color(0xFF4A7CF7)),
+                          icon: Icon(Icons.chevron_left, color: Color(0xFF333333)),
                         ),
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: Color(0xFF4A7CF7).withValues(alpha: 0.1),
+                            color: Color(0xFF333333).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -67,7 +66,7 @@ class _HomePageState extends State<HomePage> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF4A7CF7),
+                              color: Color(0xFF333333),
                             ),
                           ),
                         ),
@@ -77,7 +76,7 @@ class _HomePageState extends State<HomePage> {
                               selectedYear++;
                             });
                           },
-                          icon: Icon(Icons.chevron_right, color: Color(0xFF4A7CF7)),
+                          icon: Icon(Icons.chevron_right, color: Color(0xFF333333)),
                         ),
                       ],
                     ),
@@ -99,7 +98,7 @@ class _HomePageState extends State<HomePage> {
                             width: 60,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: isSelected ? Color(0xFF4A7CF7) : Color(0xFFF5F6FA),
+                              color: isSelected ? Color(0xFF333333) : Color(0xFFF5F5F5),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Center(
@@ -108,7 +107,7 @@ class _HomePageState extends State<HomePage> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
-                                  color: isSelected ? Colors.white : Color(0xFF1A1A2E),
+                                  color: isSelected ? Colors.white : Color(0xFF333333),
                                 ),
                               ),
                             ),
@@ -124,7 +123,7 @@ class _HomePageState extends State<HomePage> {
                             onPressed: () => Navigator.pop(context),
                             child: Text(
                               '取消',
-                              style: TextStyle(color: Color(0xFF9A9AB0)),
+                              style: TextStyle(color: Color(0xFF999999)),
                             ),
                           ),
                         ),
@@ -140,7 +139,7 @@ class _HomePageState extends State<HomePage> {
                             },
                             child: Text(
                               '回到当前',
-                              style: TextStyle(color: Color(0xFF4A7CF7)),
+                              style: TextStyle(color: Color(0xFF333333)),
                             ),
                           ),
                         ),
@@ -155,7 +154,7 @@ class _HomePageState extends State<HomePage> {
                               Navigator.pop(context);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF4A7CF7),
+                              backgroundColor: Color(0xFF333333),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -181,16 +180,10 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     initializeDateFormatting();
     _loadEvents();
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() {
-        _currentTime = DateTime.now();
-      });
-    });
   }
 
   @override
   void dispose() {
-    _timer.cancel();
     super.dispose();
   }
 
@@ -212,6 +205,85 @@ class _HomePageState extends State<HomePage> {
     return eventsForDay;
   }
 
+  /// 日历单元格：
+  /// 默认无背景；存在事件时为整块矩形背景（圆角 4px），底部显示事件条数。
+  Widget _buildCalendarDayCell(
+    DateTime date,
+    List<Event> events, {
+    bool isToday = false,
+    bool isSelected = false,
+  }) {
+    final eventCount = events.length;
+    Color backgroundColor;
+    Color textColor;
+
+    if (isSelected) {
+      // 选中态使用主题蓝色
+      backgroundColor = Color(0xFF333333);
+      textColor = Colors.white;
+    } else if (eventCount > 0) {
+      // 存在事件：黑白风下使用浅灰底 + 深灰文字
+      backgroundColor = Color(0xFF333333).withValues(alpha: 0.1);
+      textColor = Color(0xFF333333);
+    } else {
+      // 默认无背景
+      backgroundColor = Colors.transparent;
+      textColor = isToday ? Color(0xFF333333) : Color(0xFF333333);
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 取单元格的较短边并留出 4px 间隙，保证背景始终是正方形，
+        // 避免加入底部小字后矩形被拉长导致内容显得被挤压
+        final side = (constraints.maxWidth < constraints.maxHeight
+                ? constraints.maxWidth
+                : constraints.maxHeight) -
+            4;
+
+        return Center(
+          child: SizedBox(
+            width: side,
+            height: side,
+            child: Container(
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    date.day.toString(),
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      height: 1.1,
+                      fontWeight: isToday || isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                  if (eventCount > 0)
+                    Text(
+                      '事件 x $eventCount',
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.clip,
+                      style: TextStyle(
+                        color: textColor.withValues(alpha: 0.9),
+                        fontSize: 8,
+                        height: 1.1,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   int _getTotalEvents() {
     final target = _focusedDay;
     return _events.where((e) => e.date.year == target.year && e.date.month == target.month).length;
@@ -226,18 +298,33 @@ class _HomePageState extends State<HomePage> {
   String _getMonthComparison() {
     final current = _getTotalEvents();
     final last = _getLastMonthEvents();
-    if (last == 0) return current > 0 ? '+$current' : '0';
+    // 与上月对比改为次数差值，不再显示百分比
     final diff = current - last;
-    final percent = ((diff / last) * 100).round();
-    if (diff > 0) return '+$percent%';
-    if (diff < 0) return '$percent%';
-    return '0%';
+    if (diff > 0) return '+$diff 次';
+    if (diff < 0) return '$diff 次';
+    return '0 次';
   }
 
   bool _isComparisonUp() {
     final current = _getTotalEvents();
     final last = _getLastMonthEvents();
     return current >= last;
+  }
+
+  // 打开统计页面
+  void _openStatistics() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => StatisticsPage()),
+    );
+  }
+
+  // 打开数据管理（设置）页面
+  void _openSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => DataManagementPage()),
+    );
   }
 
   void _punchCard() {
@@ -274,7 +361,7 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A2E),
+                  color: Color(0xFF333333),
                 ),
               ),
               SizedBox(height: 16),
@@ -283,22 +370,22 @@ class _HomePageState extends State<HomePage> {
                 autofocus: true,
                 decoration: InputDecoration(
                   hintText: '请输入事件名称',
-                  hintStyle: TextStyle(color: Color(0xFF9A9AB0)),
+                  hintStyle: TextStyle(color: Color(0xFF999999)),
                   filled: true,
-                  fillColor: Color(0xFFF5F6FA),
+                  fillColor: Color(0xFFF5F5F5),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Color(0xFF4A7CF7), width: 2),
+                    borderSide: BorderSide(color: Color(0xFF333333), width: 2),
                   ),
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
                 style: TextStyle(
                   fontSize: 15,
-                  color: Color(0xFF1A1A2E),
+                  color: Color(0xFF333333),
                 ),
               ),
               SizedBox(height: 20),
@@ -310,7 +397,7 @@ class _HomePageState extends State<HomePage> {
                     child: Text(
                       '取消',
                       style: TextStyle(
-                        color: Color(0xFF9A9AB0),
+                        color: Color(0xFF999999),
                         fontSize: 15,
                       ),
                     ),
@@ -319,7 +406,7 @@ class _HomePageState extends State<HomePage> {
                   ElevatedButton(
                     onPressed: () => Navigator.pop(context, controller.text),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF4A7CF7),
+                      backgroundColor: Color(0xFF333333),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -364,10 +451,11 @@ class _HomePageState extends State<HomePage> {
     final selectedDayEvents = _getEventsForDay(_selectedDay ?? DateTime.now());
 
     return Scaffold(
-      backgroundColor: Color(0xFFF5F6FA),
+      backgroundColor: Color(0xFFF5F5F5),
       body: SafeArea(
         child: Column(
           children: [
+            _buildTopBar(),
             _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
@@ -384,7 +472,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       floatingActionButton: Padding(
-        padding: EdgeInsets.only(bottom: 70),
+        padding: EdgeInsets.only(bottom: 78),
         child: GestureDetector(
           onTap: _punchCard,
           child: Container(
@@ -392,43 +480,84 @@ class _HomePageState extends State<HomePage> {
             height: 56,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF4A7CF7).withValues(alpha: 0.8),
-                  Color(0xFF2E5CF7).withValues(alpha: 0.9),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0xFF4A7CF7).withValues(alpha: 0.4),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
+              // 与「统计详情」按钮一致的实心背景色
+              color: Color(0xFF333333),
+            ),
+            child: Icon(Icons.check, color: Colors.white, size: 28),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 顶部栏：左侧 App 图标 + 名称 + 副标题，右侧圆形设置按钮
+  Widget _buildTopBar() {
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // App 图标：与 Android 端 ic_launcher 同一张图，裁圆角避免生硬的方块
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.asset(
+              'assets/images/app_icon.png',
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+            ),
+          ),
+          SizedBox(width: 10),
+          // 标题 + 副标题：整体高度固定 40，与右侧设置按钮等高
+          SizedBox(
+            height: 40,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'PowerBox',
+                  style: TextStyle(
+                    fontSize: 20,
+                    height: 1.1,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF333333),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                // 固定副标题：不随页面变化
+                Text(
+                  '打卡 · 统计 · 密码管理',
+                  style: TextStyle(
+                    fontSize: 11,
+                    height: 1.1,
+                    color: Color(0xFF666666),
+                  ),
                 ),
               ],
             ),
-            child: ClipOval(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.2),
-                        Colors.white.withValues(alpha: 0.05),
-                      ],
-                    ),
-                  ),
-                  child: Icon(Icons.check, color: Colors.white, size: 28),
-                ),
+          ),
+          Spacer(),
+          // 设置按钮：直径与左侧标题区域高度一致（40）
+          GestureDetector(
+            onTap: _openSettings,
+            child: Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Color(0xFFE1E1E1)),
+              ),
+              child: Icon(
+                Icons.settings,
+                size: 20,
+                color: Color(0xFF333333),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -443,21 +572,21 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '一键打卡',
+                '打卡',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A2E),
+                  color: Color(0xFF333333),
                 ),
               ),
               SizedBox(height: 4),
-              Text(
-                '查看排期，掌控每日事件',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF9A9AB0),
-                ),
-              ),
+//               Text(
+//                 '查看排期，掌控每日事件',
+//                 style: TextStyle(
+//                   fontSize: 12,
+//                   color: Color(0xFF999999),
+//                 ),
+//               ),
             ],
           ),
         ],
@@ -469,150 +598,145 @@ class _HomePageState extends State<HomePage> {
     final total = _getTotalEvents();
     final comparison = _getMonthComparison();
     final isUp = _isComparisonUp();
-    final now = _currentTime;
     final target = _focusedDay;
 
     return Container(
       margin: EdgeInsets.fromLTRB(20, 12, 20, 0),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_month_outlined, size: 16, color: Color(0xFF4A7CF7)),
-                        SizedBox(width: 4),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Color(0xFF4A7CF7).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '${target.month}月',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF4A7CF7),
-                            ),
-                          ),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Color(0xFFE1E1E1)),
+      ),
+      child: Row(
+        children: [
+          // 左侧：事件统计，点击打开月份选择
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _showMonthPicker,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_month_outlined, size: 16, color: Color(0xFF333333)),
+                      SizedBox(width: 4),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Color(0xFF333333).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        SizedBox(width: 4),
-                        Text(
-                          '事件',
+                        child: Text(
+                          '${target.month}月',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF9A9AB0),
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF333333),
                           ),
                         ),
-                      ],
-                    ),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          total.toString(),
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A1A2E),
-                          ),
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        '切换日期',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF999999),
                         ),
-                        SizedBox(width: 8),
-                        Container(
-                          margin: EdgeInsets.only(bottom: 2),
-                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: (isUp ? Color(0xFF2ED573) : Color(0xFFFF6B6B)).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                isUp ? Icons.arrow_upward : Icons.arrow_downward,
-                                size: 10,
-                                color: isUp ? Color(0xFF2ED573) : Color(0xFFFF6B6B),
-                              ),
-                              SizedBox(width: 2),
-                              Text(
-                                '较上月 $comparison',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: isUp ? Color(0xFF2ED573) : Color(0xFFFF6B6B),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: GestureDetector(
-                onTap: _showMonthPicker,
-                child: Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                  SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}',
+                        total.toString(),
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF4A7CF7),
+                          color: Color(0xFF333333),
                         ),
                       ),
-                      SizedBox(height: 2),
-                      Text(
-                        '${_focusedDay.year}/${_focusedDay.month.toString().padLeft(2, '0')}/${_focusedDay.day.toString().padLeft(2, '0')}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF9A9AB0),
+                      // 「次」与「切换日期」文字样式保持一致
+                      Padding(
+                        padding: EdgeInsets.only(left: 2, bottom: 3),
+                        child: Text(
+                          '次',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF999999),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Container(
+                        margin: EdgeInsets.only(bottom: 2),
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: (isUp ? Color(0xFF2ED573) : Color(0xFFFF6B6B)).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isUp ? Icons.arrow_upward : Icons.arrow_downward,
+                              size: 10,
+                              color: isUp ? Color(0xFF2ED573) : Color(0xFFFF6B6B),
+                            ),
+                            SizedBox(width: 2),
+                            Text(
+                              '较上月 $comparison',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: isUp ? Color(0xFF2ED573) : Color(0xFFFF6B6B),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+          // 右侧：统计详情入口（按钮样式）
+          GestureDetector(
+            onTap: _openStatistics,
+            child: Container(
+              margin: EdgeInsets.only(left: 12),
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                // 背景与文字颜色对调：深色实心底 + 白色图标文字
+                color: Color(0xFF333333),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.bar_chart,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    '统计详情',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -624,13 +748,7 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: Color(0xFFE1E1E1)),
       ),
       child: TableCalendar(
         locale: 'zh_CN',
@@ -640,6 +758,13 @@ class _HomePageState extends State<HomePage> {
         calendarFormat: _calendarFormat,
         headerVisible: false,
         daysOfWeekHeight: 40,
+        // 星期标题只显示「一、二、三…」，不显示「周一、周二…」
+        daysOfWeekStyle: DaysOfWeekStyle(
+          dowTextFormatter: (date, locale) {
+            const labels = ['一', '二', '三', '四', '五', '六', '日'];
+            return labels[date.weekday - 1];
+          },
+        ),
         rowHeight: 48,
         selectedDayPredicate: (day) {
           return isSameDay(_selectedDay, day);
@@ -656,86 +781,41 @@ class _HomePageState extends State<HomePage> {
           });
         },
         onPageChanged: (focusedDay) {
-          _focusedDay = focusedDay;
+          // 滑动翻页时同步刷新上方统计（原本只赋值不重建）
+          setState(() {
+            _focusedDay = focusedDay;
+          });
         },
         eventLoader: _getEventsForDay,
         calendarStyle: CalendarStyle(
           outsideDaysVisible: false,
-          todayDecoration: BoxDecoration(
-            color: Color(0xFF4A7CF7).withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          todayTextStyle: TextStyle(
-            color: Color(0xFF4A7CF7),
-            fontWeight: FontWeight.bold,
-          ),
+          // 关闭默认事件圆点（背景色与底部文字已表达有事件）
+          markersMaxCount: 0,
           defaultTextStyle: TextStyle(
-            color: Color(0xFF1A1A2E),
+            color: Color(0xFF333333),
           ),
           weekendTextStyle: TextStyle(
-            color: Color(0xFF1A1A2E),
+            color: Color(0xFF333333),
           ),
         ),
         calendarBuilders: CalendarBuilders(
-          selectedBuilder: (context, date, events) => Container(
-            margin: const EdgeInsets.all(4.0),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Color(0xFF4A7CF7),
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              date.day.toString(),
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
+          selectedBuilder: (context, date, focusedDay) => _buildCalendarDayCell(
+            date,
+            _getEventsForDay(date),
+            isSelected: true,
           ),
-          todayBuilder: (context, date, events) => Container(
-            margin: const EdgeInsets.all(4.0),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Color(0xFF4A7CF7).withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              date.day.toString(),
-              style: TextStyle(
-                color: Color(0xFF4A7CF7),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          todayBuilder: (context, date, focusedDay) => _buildCalendarDayCell(
+            date,
+            _getEventsForDay(date),
+            isToday: true,
           ),
-          markerBuilder: (context, date, events) {
-            if (events.isNotEmpty) {
-              return Positioned(
-                right: 4,
-                bottom: 4,
-                child: Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: Color(0xFFFF9F43),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              );
-            }
-            return null;
-          },
-          defaultBuilder: (context, date, events) {
-            return Container(
-              margin: const EdgeInsets.all(4.0),
-              alignment: Alignment.center,
-              child: Text(
-                date.day.toString(),
-                style: TextStyle(
-                  color: Color(0xFF1A1A2E),
-                ),
-              ),
-            );
-          },
+          defaultBuilder: (context, date, focusedDay) => _buildCalendarDayCell(
+            date,
+            _getEventsForDay(date),
+          ),
           outsideBuilder: (context, date, events) {
             return Container(
-              margin: const EdgeInsets.all(4.0),
+              margin: const EdgeInsets.all(2.0),
               alignment: Alignment.center,
               child: Text(
                 date.day.toString(),
@@ -764,14 +844,14 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A2E),
+                  color: Color(0xFF333333),
                 ),
               ),
               Text(
                 '共 ${todayEvents.length} 项',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Color(0xFF9A9AB0),
+                  color: Color(0xFF999999),
                 ),
               ),
             ],
@@ -783,20 +863,14 @@ class _HomePageState extends State<HomePage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+                border: Border.all(color: Color(0xFFE1E1E1)),
               ),
               child: Center(
                 child: Text(
                   '暂无安排',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF9A9AB0),
+                    color: Color(0xFF999999),
                   ),
                 ),
               ),
@@ -834,13 +908,7 @@ class _HomePageState extends State<HomePage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 6,
-                offset: Offset(0, 2),
-              ),
-            ],
+            border: Border.all(color: Color(0xFFE1E1E1)),
           ),
           child: Row(
             children: [
@@ -853,7 +921,7 @@ class _HomePageState extends State<HomePage> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A2E),
+                        color: Color(0xFF333333),
                       ),
                     ),
                     SizedBox(height: 2),
@@ -861,7 +929,7 @@ class _HomePageState extends State<HomePage> {
                       '${event.date.hour.toString().padLeft(2, '0')}:${event.date.minute.toString().padLeft(2, '0')}',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF9A9AB0),
+                        color: Color(0xFF999999),
                       ),
                     ),
                   ],

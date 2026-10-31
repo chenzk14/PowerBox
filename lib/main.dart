@@ -1,8 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'pages/home_page.dart';
-import 'pages/statistics_page.dart';
-import 'pages/data_management_page.dart';
+import 'pages/password_manager_page.dart';
 import 'services/update_service.dart';
 
 void main() {
@@ -15,13 +14,13 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'PowerBox',
       theme: ThemeData(
-        primaryColor: Color(0xFF4A7CF7),
+        primaryColor: Color(0xFF333333),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Color(0xFF4A7CF7),
-          primary: Color(0xFF4A7CF7),
-          secondary: Color(0xFFFF9F43),
+          seedColor: Color(0xFF333333),
+          primary: Color(0xFF333333),
+          secondary: Color(0xFF666666),
         ),
-        scaffoldBackgroundColor: Color(0xFFF5F6FA),
+        scaffoldBackgroundColor: Color(0xFFF5F5F5),
         cardTheme: CardThemeData(
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -31,7 +30,7 @@ class MyApp extends StatelessWidget {
         ),
         appBarTheme: AppBarTheme(
           elevation: 0,
-          backgroundColor: Color(0xFF4A7CF7),
+          backgroundColor: Color(0xFF333333),
           foregroundColor: Colors.white,
           centerTitle: false,
         ),
@@ -48,8 +47,7 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
-  final GlobalKey<StatisticsPageState> _statisticsKey = GlobalKey();
-  final GlobalKey<DataManagementPageState> _dataKey = GlobalKey();
+  final GlobalKey<PasswordManagerPageState> _passwordKey = GlobalKey();
 
   @override
   void initState() {
@@ -77,10 +75,9 @@ class _MainPageState extends State<MainPage> {
     setState(() {
       _currentIndex = index;
     });
+    // 切换到密码管理时才请求身份验证，避免启动即弹指纹
     if (index == 1) {
-      _statisticsKey.currentState?.loadEvents();
-    } else if (index == 2) {
-      _dataKey.currentState?.loadFileInfo();
+      _passwordKey.currentState?.unlock();
     }
   }
 
@@ -93,8 +90,10 @@ class _MainPageState extends State<MainPage> {
             index: _currentIndex,
             children: [
               HomePage(),
-              StatisticsPage(key: _statisticsKey),
-              DataManagementPage(key: _dataKey),
+              PasswordManagerPage(
+                key: _passwordKey,
+                autoAuthenticate: false,
+              ),
             ],
           ),
           Positioned(
@@ -107,17 +106,23 @@ class _MainPageState extends State<MainPage> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                   child: Container(
-                    height: 60,
+                    // 标准底部导航高度：图标在上、文字在下常驻显示
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.94),
+                      // 白色底栏用顶部细边框代替阴影
+                      border: Border(
+                        top: BorderSide(color: Color(0xFFE1E1E1), width: 1),
+                      ),
+                    ),
                     child: SafeArea(
                       top: false,
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _buildNavItem(0, Icons.home_outlined, Icons.home, '首页'),
-                            _buildNavItem(1, Icons.bar_chart_outlined, Icons.bar_chart, '统计'),
-                            _buildNavItem(2, Icons.backup_outlined, Icons.backup, '数据'),
+                            _buildNavItem(0, Icons.calendar_month_outlined, Icons.calendar_month, '打卡管理'),
+                            _buildNavItem(1, Icons.lock_outline, Icons.lock, '密码管理'),
                           ],
                         ),
                       ),
@@ -134,36 +139,31 @@ class _MainPageState extends State<MainPage> {
 
   Widget _buildNavItem(int index, IconData outlineIcon, IconData filledIcon, String label) {
     final isSelected = _currentIndex == index;
+    // 未选中为灰色，选中为黑色；图标与文字常驻
+    final color = isSelected ? Color(0xFF333333) : Color(0xFF999999);
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () => _onTabChanged(index),
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 8),
-        padding: EdgeInsets.symmetric(horizontal: isSelected ? 20 : 24, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? Color(0xFF4A7CF7) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(
               isSelected ? filledIcon : outlineIcon,
-              size: 22,
-              color: isSelected ? Colors.white : Color(0xFF9A9AB0),
+              size: 20,
+              color: color,
             ),
-            if (isSelected) ...[
-              SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
+            SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: color,
               ),
-            ],
+            ),
           ],
         ),
       ),

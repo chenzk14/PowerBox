@@ -1,7 +1,7 @@
 name: com.powerbox.app
 description: A new Flutter project.
 
-version: 1.0.15+27
+version: 1.0.16+28
 
 #x.y.z - 版本号（显示给用户）
 #n - 构建号（内部版本）
@@ -23,6 +23,7 @@ dependencies:
   package_info_plus: ^8.0.0  # 用于获取App版本信息
   encrypt: ^5.0.3  # 用于密码加密存储
   local_auth: ^2.3.0  # 用于本地生物识别/密码认证
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:
@@ -30,3 +31,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # 顶部栏使用的 App 图标（与 android 端的 ic_launcher 一致）
+  assets:
+    - assets/images/

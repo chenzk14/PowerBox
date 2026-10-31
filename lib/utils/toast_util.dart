@@ -16,7 +16,7 @@ void showToast(BuildContext context, String message) {
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
-            color: Color(0xFF1A1A2E).withValues(alpha: 0.85),
+            color: Color(0xFF333333).withValues(alpha: 0.85),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
@@ -34,7 +34,11 @@ void showToast(BuildContext context, String message) {
   _currentEntry = entry;
   overlay.insert(entry);
   Future.delayed(Duration(milliseconds: 1500), () {
-    entry.remove();
+    // 期间若又弹出了新的 toast，旧的 entry 已被 showToast 移除，
+    // 再次 remove 会触发 “An OverlayEntry should be removed only once” 断言
+    if (entry.mounted) {
+      entry.remove();
+    }
     if (_currentEntry == entry) {
       _currentEntry = null;
     }
