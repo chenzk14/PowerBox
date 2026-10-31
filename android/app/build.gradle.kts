@@ -43,6 +43,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Windows 下 extractReleaseNativeSymbolTables 可能因文件被占用而失败，
+            // 关闭原生调试符号提取（不影响 APK 运行与功能）
+            ndk {
+                debugSymbolLevel = "NONE"
+            }
         }
     }
 }
