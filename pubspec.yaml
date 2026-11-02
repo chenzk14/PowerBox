@@ -1,7 +1,7 @@
 name: com.powerbox.app
 description: A new Flutter project.
 
-version: 1.0.16+28
+version: 1.0.17+29
 
 #x.y.z - 版本号（显示给用户）
 #n - 构建号（内部版本）
@@ -24,6 +24,8 @@ dependencies:
   encrypt: ^5.0.3  # 用于密码加密存储
   local_auth: ^2.3.0  # 用于本地生物识别/密码认证
   url_launcher: ^6.3.3
+  font_awesome_flutter: ^11.0.0  # 本地品牌图标库，补充 Simple Icons 缺失的品牌
+  simple_icons: ^16.23.0  # 本地品牌图标库，用于密码卡片图标
 
 dev_dependencies:
   flutter_test:

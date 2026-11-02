@@ -5,8 +5,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import '../models/event_model.dart';
 import '../services/local_storage.dart';
 import '../utils/toast_util.dart';
+import '../widgets/app_top_bar.dart';
 import 'statistics_page.dart';
-import 'data_management_page.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -319,18 +319,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // 打开数据管理（设置）页面
-  void _openSettings() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => DataManagementPage()),
-    );
-  }
-
   void _punchCard() {
     final punchDate = _selectedDay ?? DateTime.now();
     final newEvent = Event(
-      name: '新事件',
+      name: '未命名事件',
       date: DateTime(punchDate.year, punchDate.month, punchDate.day,
           DateTime.now().hour, DateTime.now().minute, DateTime.now().second),
       status: EventStatus.scheduled,
@@ -455,7 +447,8 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(),
+            // 统一使用全局顶部栏，避免各页面重复维护
+            AppTopBar(),
             _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
@@ -486,78 +479,6 @@ class _HomePageState extends State<HomePage> {
             child: Icon(Icons.check, color: Colors.white, size: 28),
           ),
         ),
-      ),
-    );
-  }
-
-  // 顶部栏：左侧 App 图标 + 名称 + 副标题，右侧圆形设置按钮
-  Widget _buildTopBar() {
-    return Container(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // App 图标：与 Android 端 ic_launcher 同一张图，裁圆角避免生硬的方块
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Image.asset(
-              'assets/images/app_icon.png',
-              width: 40,
-              height: 40,
-              fit: BoxFit.cover,
-            ),
-          ),
-          SizedBox(width: 10),
-          // 标题 + 副标题：整体高度固定 40，与右侧设置按钮等高
-          SizedBox(
-            height: 40,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'PowerBox',
-                  style: TextStyle(
-                    fontSize: 20,
-                    height: 1.1,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF333333),
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                // 固定副标题：不随页面变化
-                Text(
-                  '打卡 · 统计 · 密码管理',
-                  style: TextStyle(
-                    fontSize: 11,
-                    height: 1.1,
-                    color: Color(0xFF666666),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Spacer(),
-          // 设置按钮：直径与左侧标题区域高度一致（40）
-          GestureDetector(
-            onTap: _openSettings,
-            child: Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: Color(0xFFE1E1E1)),
-              ),
-              child: Icon(
-                Icons.settings,
-                size: 20,
-                color: Color(0xFF333333),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

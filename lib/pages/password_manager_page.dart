@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
 import '../models/password_model.dart';
+import '../services/app_icon_catalog.dart';
 import '../services/password_storage.dart';
 import '../utils/toast_util.dart';
+import '../widgets/app_icon_picker.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/circle_action_button.dart';
 
@@ -171,6 +173,8 @@ class PasswordManagerPageState extends State<PasswordManagerPage> {
     final passwordController = TextEditingController(text: entry?.password ?? '');
     bool obscurePassword = true;
     final formKey = GlobalKey<FormState>();
+    // null：按名称自动匹配；''：强制使用首字母；其他：指定图标 key
+    String? selectedIconKey = entry?.iconKey;
 
     await showDialog(
       context: context,
@@ -189,16 +193,47 @@ class PasswordManagerPageState extends State<PasswordManagerPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildDialogInputField(
-                      controller: nameController,
-                      label: '名称',
-                      hintText: '如：微信、支付宝、GitHub',
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return '请输入名称';
-                        }
-                        return null;
-                      },
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 图标预览：点击可打开本地图标选择器
+                        Padding(
+                          padding: EdgeInsets.only(top: 22),
+                          child: _buildDialogIconPreview(
+                            iconKey: selectedIconKey,
+                            name: nameController.text,
+                            onTap: () async {
+                              final picked = await _showIconPicker(
+                                currentKey: selectedIconKey ??
+                                    matchAppIcon(nameController.text)?.key,
+                              );
+                              if (picked == null || !dialogContext.mounted) return;
+                              setDialogState(() {
+                                selectedIconKey =
+                                    picked.isEmpty ? '' : picked;
+                              });
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: _buildDialogInputField(
+                            controller: nameController,
+                            label: '名称',
+                            hintText: '如：微信、支付宝、GitHub',
+                            onChanged: (_) {
+                              // 名称变化时刷新自动匹配的图标预览
+                              setDialogState(() {});
+                            },
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return '请输入名称';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     SizedBox(height: 16),
                     _buildDialogInputField(
@@ -256,6 +291,7 @@ class PasswordManagerPageState extends State<PasswordManagerPage> {
                     name: nameController.text.trim(),
                     account: accountController.text.trim(),
                     password: passwordController.text.trim(),
+                    iconKey: selectedIconKey,
                     createdAt: entry?.createdAt,
                   );
 
@@ -297,6 +333,7 @@ class PasswordManagerPageState extends State<PasswordManagerPage> {
     required String hintText,
     bool obscureText = false,
     Widget? suffixIcon,
+    ValueChanged<String>? onChanged,
     String? Function(String?)? validator,
   }) {
     return Column(
@@ -314,6 +351,7 @@ class PasswordManagerPageState extends State<PasswordManagerPage> {
         TextFormField(
           controller: controller,
           obscureText: obscureText,
+          onChanged: onChanged,
           validator: validator,
           decoration: InputDecoration(
             hintText: hintText,
@@ -361,6 +399,7 @@ class PasswordManagerPageState extends State<PasswordManagerPage> {
       name: entry.name,
       account: entry.account,
       password: entry.password,
+      iconKey: entry.iconKey,
     );
     await PasswordStorage.addPassword(newEntry);
     if (!mounted) return;
@@ -654,8 +693,6 @@ class PasswordManagerPageState extends State<PasswordManagerPage> {
   }
 
   Widget _buildSwipeCard(PasswordEntry entry, int index, bool isExpanded) {
-    final avatarColor = _getAvatarColor(entry.name);
-    
     // 右滑分段：第一段为编辑，继续右滑为复制卡片；按住过程中左滑为取消
     return _SwipeCard(
       key: ValueKey(entry.id),
@@ -688,18 +725,7 @@ class PasswordManagerPageState extends State<PasswordManagerPage> {
                   padding: EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: avatarColor,
-                        child: Text(
-                          entry.avatarText,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                      _buildAvatar(entry),
                       SizedBox(width: 16),
                       Expanded(
                         child: Column(
@@ -860,6 +886,122 @@ class PasswordManagerPageState extends State<PasswordManagerPage> {
           ),
         ),
       ],
+    );
+  }
+
+  /// 解析一条记录实际使用的图标。
+  /// 手动选择的图标优先；未选择时按名称自动匹配；返回 null 表示使用首字母。
+  AppIconOption? _resolveEntryIcon(PasswordEntry entry) {
+    final iconKey = entry.iconKey;
+    if (iconKey != null) {
+      if (iconKey.isEmpty) return null;
+      return findAppIconByKey(iconKey);
+    }
+    return matchAppIcon(entry.name);
+  }
+
+  /// 卡片左侧头像：有图标时显示本地品牌图标，否则回退到彩色首字母。
+  Widget _buildAvatar(PasswordEntry entry) {
+    final option = _resolveEntryIcon(entry);
+    if (option != null) {
+      return Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: Color(0xFFE1E1E1)),
+        ),
+        alignment: Alignment.center,
+        child: buildAppIcon(option, size: 26),
+      );
+    }
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor: _getAvatarColor(entry.name),
+      child: Text(
+        entry.avatarText,
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  /// 弹窗中的图标预览。iconKey 为 null 时按名称自动匹配，'' 时强制首字母。
+  AppIconOption? _resolvePreviewIcon(String? iconKey, String name) {
+    if (iconKey != null) {
+      if (iconKey.isEmpty) return null;
+      return findAppIconByKey(iconKey);
+    }
+    return matchAppIcon(name);
+  }
+
+  Widget _buildDialogIconPreview({
+    required String? iconKey,
+    required String name,
+    required VoidCallback onTap,
+  }) {
+    final option = _resolvePreviewIcon(iconKey, name);
+    final trimmed = name.trim();
+    final letter = trimmed.isEmpty ? '?' : trimmed[0].toUpperCase();
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: option == null ? _getAvatarColor(name) : Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: Color(0xFFE1E1E1)),
+            ),
+            alignment: Alignment.center,
+            child: option != null
+                ? buildAppIcon(option, size: 26)
+                : Text(
+                    letter,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+          ),
+          // 右下角小编辑角标，提示可点击更换
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: Color(0xFF333333),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: Icon(Icons.edit, size: 10, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 打开本地图标选择器。
+  /// 返回图标 key；'' 表示使用首字母；null 表示取消。
+  Future<String?> _showIconPicker({String? currentKey}) {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AppIconPicker(currentKey: currentKey),
     );
   }
 

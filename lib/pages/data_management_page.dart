@@ -159,7 +159,7 @@ class DataManagementPageState extends State<DataManagementPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.vpn_key, color: Color(0xFF666666)),
+              leading: Icon(Icons.lock, color: Color(0xFF333333)),
               title: Text('密码数据'),
               subtitle: Text('导出加密后的密码数据及密钥'),
               onTap: () {
@@ -191,7 +191,7 @@ class DataManagementPageState extends State<DataManagementPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.vpn_key, color: Color(0xFF666666)),
+              leading: Icon(Icons.lock, color: Color(0xFF333333)),
               title: Text('密码数据'),
               subtitle: Text('从加密文件导入密码数据及密钥'),
               onTap: () {
@@ -280,25 +280,25 @@ class DataManagementPageState extends State<DataManagementPage> {
     return Row(
       children: [
         // 返回按钮：从首页设置入口进入时显示
-        if (Navigator.canPop(context)) ...[
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              margin: EdgeInsets.only(right: 10),
-              padding: EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Color(0xFFE1E1E1)),
-              ),
-              child: Icon(
-                Icons.arrow_back_ios_new,
-                size: 16,
-                color: Color(0xFF333333),
-              ),
-            ),
-          ),
-        ],
+//         if (Navigator.canPop(context)) ...[
+//           GestureDetector(
+//             onTap: () => Navigator.pop(context),
+//             child: Container(
+//               margin: EdgeInsets.only(right: 10),
+//               padding: EdgeInsets.all(6),
+//               decoration: BoxDecoration(
+//                 color: Colors.white,
+//                 borderRadius: BorderRadius.circular(8),
+//                 border: Border.all(color: Color(0xFFE1E1E1)),
+//               ),
+//               child: Icon(
+//                 Icons.arrow_back_ios_new,
+//                 size: 16,
+//                 color: Color(0xFF333333),
+//               ),
+//             ),
+//           ),
+//         ],
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -86,7 +86,7 @@ class AppTopBar extends StatelessWidget {
               ),
               child: Icon(
                 Icons.settings,
-                size: 20,
+                size: 24,
                 color: Color(0xFF333333),
               ),
             ),

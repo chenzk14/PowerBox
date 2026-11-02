@@ -450,8 +450,8 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: totalEvents > 0
                   ? Color(0xFF333333).withValues(alpha: 0.1)
@@ -459,13 +459,33 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
-              child: Text(
-                '$month',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: totalEvents > 0 ? Color(0xFF333333) : Color(0xFF999999),
-                ),
+              // 月份：数字大、月字小
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '$month',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: totalEvents > 0
+                          ? Color(0xFF333333)
+                          : Color(0xFF999999),
+                    ),
+                  ),
+                  Text(
+                    ' 月',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 10,
+                      color: totalEvents > 0
+                          ? Color(0xFF333333)
+                          : Color(0xFF999999),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -475,23 +495,22 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$month 月',
+                  '详细日期',
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF333333),
+                    color: Color(0xFF666666),
                   ),
                 ),
-                if (sortedDays.isNotEmpty) ...[
-                  SizedBox(height: 4),
-                  Text(
-                    '打卡日期：$daysText',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF999999),
-                    ),
+                SizedBox(height: 4),
+                Text(
+                  // 没有打卡日期时显示暂无
+                  sortedDays.isEmpty ? '暂无' : daysText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF999999),
                   ),
-                ],
+                ),
               ],
             ),
           ),
@@ -504,7 +523,8 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              '$totalEvents次',
+              // 为 0 时不显示 x，只显示 0
+              totalEvents > 0 ? 'x$totalEvents' : '$totalEvents',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
