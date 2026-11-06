@@ -1,7 +1,6 @@
 # PowerBox
 
 <p align="center">
-  <a href="https://github.com/chenzk14/PowerBox/tags"><img alt="Latest tag" src="https://img.shields.io/github/v/tag/chenzk14/PowerBox?sort=semver&color=333333"></a>
   <a href="https://github.com/chenzk14/PowerBox/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/chenzk14/PowerBox?style=flat&logo=github&color=F59E0B"></a>
   <a href="https://github.com/chenzk14/PowerBox/commits/main"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/chenzk14/PowerBox?style=flat&logo=github"></a>
   <a href="https://pubspec.dev"><img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.44.5-02569B?logo=flutter&logoColor=white"></a>
