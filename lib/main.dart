@@ -1,17 +1,71 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'pages/express_page.dart';
 import 'pages/home_page.dart';
 import 'pages/password_manager_page.dart';
+import 'services/battery_widget_service.dart';
+import 'services/shortcut_service.dart';
 import 'services/update_service.dart';
 
+/// 全局导航 key：桌面快捷方式跳转时使用，避免拿不到 context
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  ShortcutService.init();
+  ShortcutService.actionStream.listen(_handleShortcutAction);
   runApp(MyApp());
+
+  // 冷启动：首帧之后主动拉取原生缓存的快捷方式动作
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    final action = await ShortcutService.getInitialAction();
+    if (action != null) {
+      _handleShortcutAction(action);
+    }
+  });
+
+  // 冷启动时顺便刷新一次桌面电池小组件
+  BatteryWidgetService.refreshWidget();
+}
+
+/// 处理桌面快捷方式跳转
+DateTime? _lastShortcutHandledAt;
+
+void _handleShortcutAction(String action, {int attempt = 0}) {
+  if (action != ShortcutService.actionExpress) return;
+
+  // 已经停留在快递页时不重复打开
+  if (ExpressPage.isVisible) return;
+
+  final navigator = appNavigatorKey.currentState;
+  if (navigator == null) {
+    // 首帧尚未构建完成，下一帧再试
+    if (attempt < 20) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _handleShortcutAction(action, attempt: attempt + 1),
+      );
+    }
+    return;
+  }
+
+  // 冷启动与热启动两条通路可能同时到达，做一个短间隔防抖
+  final now = DateTime.now();
+  if (_lastShortcutHandledAt != null &&
+      now.difference(_lastShortcutHandledAt!).inMilliseconds < 1500) {
+    return;
+  }
+  _lastShortcutHandledAt = now;
+
+  navigator.push(
+    MaterialPageRoute(builder: (context) => const ExpressPage()),
+  );
 }
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       title: 'PowerBox',
       theme: ThemeData(
         primaryColor: Color(0xFF333333),

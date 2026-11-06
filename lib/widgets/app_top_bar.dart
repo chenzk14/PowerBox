@@ -1,17 +1,32 @@
 import 'package:flutter/material.dart';
 import '../pages/data_management_page.dart';
+import '../pages/tools_page.dart';
 
-/// 全局顶部栏：左侧 App 图标 + 名称 + 副标题，右侧圆形设置按钮。
+/// 全局顶部栏：左侧 App 图标 + 名称 + 副标题，右侧圆形工具与设置按钮。
 ///
 /// 标题与副标题固定，不随页面变化。
 /// [onSettingsTap] 不传时默认打开数据管理页；传入回调可自定义跳转行为。
+/// [onToolsTap] 不传时默认打开常用工具页。
 class AppTopBar extends StatelessWidget {
   const AppTopBar({
     super.key,
     this.onSettingsTap,
+    this.onToolsTap,
   });
 
   final VoidCallback? onSettingsTap;
+  final VoidCallback? onToolsTap;
+
+  void _handleToolsTap(BuildContext context) {
+    if (onToolsTap != null) {
+      onToolsTap!();
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ToolsPage()),
+    );
+  }
 
   void _handleSettingsTap(BuildContext context) {
     if (onSettingsTap != null) {
@@ -72,6 +87,26 @@ class AppTopBar extends StatelessWidget {
             ),
           ),
           Spacer(),
+          // 工具按钮：与设置按钮同款圆形，位于其左侧
+          GestureDetector(
+            onTap: () => _handleToolsTap(context),
+            child: Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Color(0xFFE1E1E1)),
+              ),
+              child: Icon(
+                Icons.handyman_outlined,
+                size: 22,
+                color: Color(0xFF333333),
+              ),
+            ),
+          ),
+          SizedBox(width: 10),
           // 设置按钮：直径与左侧标题区域高度一致（40）
           GestureDetector(
             onTap: () => _handleSettingsTap(context),

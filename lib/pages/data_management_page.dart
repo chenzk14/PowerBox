@@ -10,6 +10,7 @@ import '../services/local_storage.dart';
 import '../utils/toast_util.dart';
 import '../services/update_service.dart';
 import '../services/password_storage.dart';
+import '../services/app_settings.dart';
 
 class DataManagementPage extends StatefulWidget {
   const DataManagementPage({super.key});
@@ -23,11 +24,30 @@ class DataManagementPageState extends State<DataManagementPage> {
   bool _isLoading = false;
   String _currentVersion = '';
   bool _hasUpdate = false;
+  bool _expressAuthEnabled = true;
   @override
   void initState() {
     super.initState();
     loadFileInfo();
     _loadVersionInfo();
+    _loadToolSettings();
+  }
+
+  /// 加载工具相关设置
+  Future<void> _loadToolSettings() async {
+    final expressAuth = await AppSettings.getExpressAuthEnabled();
+    if (!mounted) return;
+    setState(() {
+      _expressAuthEnabled = expressAuth;
+    });
+  }
+
+  /// 切换快递页身份验证
+  Future<void> _setExpressAuth(bool value) async {
+    setState(() {
+      _expressAuthEnabled = value;
+    });
+    await AppSettings.setExpressAuthEnabled(value);
   }
 
   Future<void> _loadVersionInfo() async {
@@ -268,6 +288,8 @@ class DataManagementPageState extends State<DataManagementPage> {
                     SizedBox(height: 24),
                     _buildDataSection(),
                     SizedBox(height: 24),
+                    _buildToolsSection(),
+                    SizedBox(height: 24),
                     _buildAboutSection(),
                   ],
                 ),
@@ -477,6 +499,78 @@ class DataManagementPageState extends State<DataManagementPage> {
           ),
         ),
       ],
+    );
+  }
+
+  /// 工具：快递页身份验证开关
+  Widget _buildToolsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('工具'),
+        _buildGroupCard(
+          child: _buildSwitchTile(
+            icon: Icons.fingerprint,
+            title: '快递页身份验证',
+            subtitle: '进入快递管理时验证身份，关闭后直接查看',
+            value: _expressAuthEnabled,
+            onChanged: _setExpressAuth,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 带开关的条目：左侧图标 + 标题/副标题 + 右侧 Switch
+  Widget _buildSwitchTile({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 22,
+            color: Color(0xFF333333),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF333333),
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF8E8E93),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: Color(0xFF333333),
+            onChanged: onChanged,
+          ),
+        ],
+      ),
     );
   }
 

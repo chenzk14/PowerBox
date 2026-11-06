@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PowerBox 时钟桌面小组件（2x2）：上时、中分、下日期/星期/电量 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_clock_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/widget_clock_bg"
+    android:padding="@dimen/clock_padding">
+
+    <!-- 上：时（00-23）
+         用 TextClock 而非 TextView：TextClock 由系统进程每分钟派发 TIME_TICK 自动重绘，
+         桌面（Launcher 进程）里就能自己走时，不需要 PowerBox 进程存活、也不依赖闹钟。 -->
+    <TextClock
+        style="@style/ClockWidgetTime"
+        android:id="@+id/clock_hour"
+        android:format12Hour="@string/clock_format_hour"
+        android:format24Hour="@string/clock_format_hour" />
+
+    <!-- 中：分（00-59）。负 marginTop 让两行数字像参考图那样贴近 -->
+    <TextClock
+        style="@style/ClockWidgetTime"
+        android:id="@+id/clock_minute"
+        android:layout_marginTop="@dimen/clock_time_line_gap"
+        android:format12Hour="@string/clock_format_minute"
+        android:format24Hour="@string/clock_format_minute" />
+
+    <!-- 下：日期 + 星期 + 电量百分比，如 6日 周五 电量93% -->
+    <LinearLayout style="@style/ClockWidgetMetaRow">
+
+        <!-- 日期/星期：同样用 TextClock，跨天、跨周会自动变化 -->
+        <TextClock
+            style="@style/ClockWidgetMetaText"
+            android:id="@+id/clock_date"
+            android:format12Hour="@string/clock_format_date"
+            android:format24Hour="@string/clock_format_date" />
+
+        <!-- 电量：电量变化慢，由定时刷新（WidgetRefreshReceiver）更新，初始占位 -->
+        <TextView
+            style="@style/ClockWidgetMetaText"
+            android:id="@+id/clock_battery"
+            android:text="  电量--%" />
+    </LinearLayout>
+</LinearLayout>

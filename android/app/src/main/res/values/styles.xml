@@ -15,4 +15,79 @@
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
+
+    <!-- 电池小组件：单元格（等分一列） -->
+    <style name="BatteryWidgetCell">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
+    <!-- 电池小组件：数值（大数字居中） -->
+    <style name="BatteryWidgetValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">1dp</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/widget_text</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <!-- 电池小组件：标签（中文小字） -->
+    <style name="BatteryWidgetLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/widget_subtext</item>
+        <item name="android:maxLines">1</item>
+    </style>
+
+    <!-- 电池小组件：单位（中文小字） -->
+    <style name="BatteryWidgetUnit">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">1dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/widget_subtext</item>
+        <item name="android:maxLines">1</item>
+    </style>
+
+    <!-- 时钟小组件：时间主文字风格（参考图：大号细体，上时中分） -->
+    <style name="ClockWidgetTime">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textSize">@dimen/clock_time_text_size</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <!--加粗-->
+        <item name="android:textFontWeight">700</item>
+        <!--加宽-->
+        <item name="android:textScaleX">1.15</item>
+        <item name="android:textColor">@color/clock_text</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- 时钟小组件：副文字行容器（横向，包裹"日期/星期"与"电量"两段） -->
+    <style name="ClockWidgetMetaRow">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">@dimen/clock_meta_margin_top</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <!-- 时钟小组件：副文字风格（日期/星期/电量，单个文字控件，间距由 ClockWidgetMetaRow 统一控制） -->
+    <style name="ClockWidgetMetaText">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textSize">@dimen/clock_meta_text_size</item>
+        <item name="android:textColor">@color/clock_subtext</item>
+    </style>
 </resources>

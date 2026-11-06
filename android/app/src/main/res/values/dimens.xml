@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 全局尺寸（电池/时钟小组件等），统一管理 -->
+<resources>
+    <!-- 时钟小组件：时间主文字大小（参考图：细体大字号） -->
+    <dimen name="clock_time_text_size">65sp</dimen>
+
+    <!-- 时钟小组件：时与分之间的行间距。
+         负值用于收紧两行：字体本身带有 ascent/descent 留白，
+         单纯排两行会显得分得很开，用负 margin 把"分"往上提，贴近参考图效果。 -->
+    <dimen name="clock_time_line_gap">-22dp</dimen>
+
+    <!-- 时钟小组件：副文字（日期/星期/电量）大小 -->
+    <dimen name="clock_meta_text_size">13sp</dimen>
+
+    <!-- 时钟小组件：根布局内边距（参考图边距很小） -->
+    <dimen name="clock_padding">6dp</dimen>
+
+    <!-- 时钟小组件：黑色圆角背景圆角半径 -->
+    <dimen name="clock_bg_radius">20dp</dimen>
+
+    <!-- 时钟小组件：副文字与分之间的上边距（字体自带 descent 留白，这里只补一点点） -->
+    <dimen name="clock_meta_margin_top">1dp</dimen>
+</resources>

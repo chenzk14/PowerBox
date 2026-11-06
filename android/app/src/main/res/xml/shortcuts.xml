@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 桌面长按图标的快捷方式入口 -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="express"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_express"
+        android:shortcutShortLabel="@string/shortcut_express_short"
+        android:shortcutLongLabel="@string/shortcut_express_long">
+        <intent
+            android:action="com.powerbox.app.SHORTCUT_EXPRESS"
+            android:targetPackage="com.powerbox.app"
+            android:targetClass="com.powerbox.app.MainActivity" />
+    </shortcut>
+</shortcuts>

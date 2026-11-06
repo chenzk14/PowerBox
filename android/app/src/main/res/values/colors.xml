@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_bg">#fffffd</color>
+    <color name="widget_inner_bg">#e9edf3</color>
+    <color name="widget_text">#1C1C1E</color>
+    <color name="widget_subtext">#8E8E93</color>
+
+    <!-- 时钟小组件：黑色圆角背景 -->
+    <color name="clock_bg">#fcfcfc</color>
+    <!-- 时钟小组件：时间主文字（白色） -->
+    <color name="clock_text">#000000</color>
+    <!-- 时钟小组件：副文字（日期/星期/电量，白色85%） -->
+    <color name="clock_subtext">#000000</color>
+</resources>

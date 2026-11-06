@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_express_short">快递</string>
+    <string name="shortcut_express_long">快递管理</string>
+    <string name="battery_widget_name">PowerBox 电池</string>
+    <string name="battery_widget_desc">在桌面显示实时电池容量、健康度与充电功率</string>
+    <string name="clock_widget_name">PowerBox 时钟</string>
+    <string name="clock_widget_desc">2x2 时钟小组件，显示时间、日期、星期与电量百分比</string>
+
+    <!-- 时钟小组件：TextClock 的时间格式（由系统每分钟自动刷新，无需应用定时任务） -->
+    <!-- 时：24 小时制，两位（00-23） -->
+    <string name="clock_format_hour">HH</string>
+    <!-- 分：两位（00-59） -->
+    <string name="clock_format_minute">mm</string>
+    <!-- 日期：如 6日 周五（EEEE 显示"周五"，单引号内为原样输出的中文） -->
+    <string name="clock_format_date">d\'日\' EEE</string>
+</resources>

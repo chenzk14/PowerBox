@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PowerBox 电池桌面小组件：浅灰外卡 + 两个圆角内卡，纯 RemoteViews 布局 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_battery_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_battery_bg"
+    android:paddingStart="6dp"
+    android:paddingEnd="6dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+
+    <!-- 第一排内卡：设计容量 / 实时容量 / 最大容量 / 实时容量比 / 最大容量比 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:background="@drawable/widget_battery_inner_bg"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <LinearLayout style="@style/BatteryWidgetCell">
+            <TextView style="@style/BatteryWidgetLabel" android:text="设计容量" />
+            <TextView style="@style/BatteryWidgetValue" android:id="@+id/battery_design_value" android:text="--" />
+            <TextView style="@style/BatteryWidgetUnit" android:text="毫安" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/BatteryWidgetCell">
+            <TextView style="@style/BatteryWidgetLabel" android:text="实时容量" />
+            <TextView style="@style/BatteryWidgetValue" android:id="@+id/battery_realtime_value" android:text="--" />
+            <TextView style="@style/BatteryWidgetUnit" android:text="毫安" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/BatteryWidgetCell">
+            <TextView style="@style/BatteryWidgetLabel" android:text="最大容量" />
+            <TextView style="@style/BatteryWidgetValue" android:id="@+id/battery_max_value" android:text="--" />
+            <TextView style="@style/BatteryWidgetUnit" android:text="毫安" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/BatteryWidgetCell">
+            <TextView style="@style/BatteryWidgetLabel" android:text="实时容量比" />
+            <TextView style="@style/BatteryWidgetValue" android:id="@+id/battery_realtime_ratio" android:text="--" />
+            <TextView style="@style/BatteryWidgetUnit" android:text="百分比" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/BatteryWidgetCell">
+            <TextView style="@style/BatteryWidgetLabel" android:text="最大容量比" />
+            <TextView style="@style/BatteryWidgetValue" android:id="@+id/battery_max_ratio" android:text="--" />
+            <TextView style="@style/BatteryWidgetUnit" android:text="百分比" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 两排内卡之间留白 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="6dp" />
+
+    <!-- 第二排内卡：电池温度 / 电池电压 / 充电电压 / 充电电流 / 充电功率 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:background="@drawable/widget_battery_inner_bg"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <LinearLayout style="@style/BatteryWidgetCell">
+            <TextView style="@style/BatteryWidgetLabel" android:text="电池温度" />
+            <TextView style="@style/BatteryWidgetValue" android:id="@+id/battery_temp" android:text="--" />
+            <TextView style="@style/BatteryWidgetUnit" android:text="度" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/BatteryWidgetCell">
+            <TextView style="@style/BatteryWidgetLabel" android:text="电池电压" />
+            <TextView style="@style/BatteryWidgetValue" android:id="@+id/battery_voltage" android:text="--" />
+            <TextView style="@style/BatteryWidgetUnit" android:text="伏" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/BatteryWidgetCell">
+            <TextView style="@style/BatteryWidgetLabel" android:text="充电电压" />
+            <TextView style="@style/BatteryWidgetValue" android:id="@+id/battery_charge_voltage" android:text="--" />
+            <TextView style="@style/BatteryWidgetUnit" android:text="伏" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/BatteryWidgetCell">
+            <TextView style="@style/BatteryWidgetLabel" android:text="充电电流" />
+            <TextView style="@style/BatteryWidgetValue" android:id="@+id/battery_current" android:text="--" />
+            <TextView style="@style/BatteryWidgetUnit" android:text="安" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/BatteryWidgetCell">
+            <TextView style="@style/BatteryWidgetLabel" android:text="充电功率" />
+            <TextView style="@style/BatteryWidgetValue" android:id="@+id/battery_power" android:text="--" />
+            <TextView style="@style/BatteryWidgetUnit" android:text="瓦" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
