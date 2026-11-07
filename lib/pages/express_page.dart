@@ -537,13 +537,11 @@ class _ExpressPageState extends State<ExpressPage> {
     return '$name | $station';
   }
 
-  /// 展开详情区：驿站/地址/尾号/备注 + 复制取件码/编辑（取件码常显在卡片头部，此处不重复）
+  /// 展开详情区：驿站/尾号 + 复制取件码/编辑（取件码常显在卡片头部，此处不重复）
   Widget _buildDetailSection(ExpressEntry entry) {
     // 详情里有没有真正要显示的字段，没有就压紧布局
     final hasDetail = entry.station.trim().isNotEmpty ||
-        entry.address.trim().isNotEmpty ||
-        entry.phoneTail.trim().isNotEmpty ||
-        entry.note.trim().isNotEmpty;
+        entry.phoneTail.trim().isNotEmpty;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -568,10 +566,6 @@ class _ExpressPageState extends State<ExpressPage> {
             const SizedBox(height: 12),
             _buildDetailRow('驿站', entry.station.trim(), Icons.storefront_outlined),
           ],
-          if (entry.address.trim().isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _buildDetailRow('收货地址', entry.address.trim(), Icons.location_on_outlined),
-          ],
           if (entry.phoneTail.trim().isNotEmpty) ...[
             const SizedBox(height: 12),
             _buildDetailRow(
@@ -579,10 +573,6 @@ class _ExpressPageState extends State<ExpressPage> {
               '尾号 ${entry.phoneTail.trim()}',
               Icons.phone_iphone,
             ),
-          ],
-          if (entry.note.trim().isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _buildDetailRow('备注', entry.note.trim(), Icons.notes_outlined),
           ],
           SizedBox(height: hasDetail ? 16 : 4),
           Row(

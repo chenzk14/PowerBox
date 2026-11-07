@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/event_model.dart';
 
@@ -7,10 +8,24 @@ class FileStorage {
   static const String _fileName = 'todo_data.json';
   static const String _backupFileName = 'todo_data_backup.json';
   static const String _exportDirName = 'TodoList';
+  // 备份目录固定为 /storage/emulated/0/PowerBox_Backups
+  static const String _backupDirName = 'PowerBox_Backups';
+
+  // 与原生 installer 通道复用，用于打开数据文件夹
+  static const MethodChannel _channel = MethodChannel('com.powerbox.app/installer');
 
   // 导出目录固定为 /storage/emulated/0/TodoList
   static Future<Directory> get _exportDirectory async {
     final dir = Directory('/storage/emulated/0/$_exportDirName');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return dir;
+  }
+
+  // 备份目录固定为 /storage/emulated/0/PowerBox_Backups
+  static Future<Directory> get _backupDirectory async {
+    final dir = Directory('/storage/emulated/0/$_backupDirName');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
@@ -270,6 +285,79 @@ class FileStorage {
       };
     }
     return {'exists': false};
+  }
+
+  /// 是否已获得所有文件访问权限（Android 11+）
+  static Future<bool> isManageStoragePermissionGranted() async {
+    try {
+      final granted =
+          await _channel.invokeMethod<bool>('isManageStoragePermissionGranted');
+      return granted ?? false;
+    } catch (e) {
+      print('检查存储权限失败: $e');
+      return false;
+    }
+  }
+
+  /// 跳转到系统设置申请所有文件访问权限
+  static Future<void> requestManageStoragePermission() async {
+    try {
+      await _channel.invokeMethod('requestManageStoragePermission');
+    } catch (e) {
+      print('申请存储权限失败: $e');
+    }
+  }
+
+  /// 备份打卡和密码数据到根目录 PowerBox_Backups
+  /// 返回生成的两个文件路径
+  static Future<List<String>> backupAll({
+    required List<Event> events,
+    required Map<String, String> passwordData,
+  }) async {
+    final directory = await _backupDirectory;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final exportedAt = DateTime.now().toIso8601String();
+
+    // 打卡数据
+    final eventList = events.map((event) => event.toJson()).toList();
+    final eventsFile = File('${directory.path}/todo_data_$timestamp.json');
+    await eventsFile.writeAsString(json.encode({
+      'version': '1.0',
+      'exportedAt': exportedAt,
+      'totalEvents': events.length,
+      'events': eventList,
+    }));
+
+    // 密码数据（加密内容 + 密钥 + IV）
+    final passwordFile = File('${directory.path}/password_data_$timestamp.json');
+    await passwordFile.writeAsString(json.encode({
+      'version': '1.0',
+      'exportedAt': exportedAt,
+      'passwords': passwordData['passwords'],
+      'encryptionKey': passwordData['encryptionKey'],
+      'encryptionIv': passwordData['encryptionIv'],
+    }));
+
+    return [eventsFile.path, passwordFile.path];
+  }
+
+  /// 用系统文件管理器打开数据文件所在目录。
+  ///
+  /// Android 11+ 无法直接访问应用私有目录（Android/data），
+  /// 原生侧会先把文件复制到公共 Download/TodoList，再打开该目录。
+  static Future<bool> openDataFolder() async {
+    try {
+      final file = await _dataFile;
+      final folder = file.parent;
+      if (!await folder.exists()) return false;
+      final result = await _channel.invokeMethod<bool>('openFolder', {
+        'path': folder.path,
+      });
+      return result ?? false;
+    } catch (e) {
+      print('打开数据文件夹失败: $e');
+      return false;
+    }
   }
 
   // 删除数据文件（谨慎使用）

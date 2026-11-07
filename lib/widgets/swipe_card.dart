@@ -23,8 +23,9 @@ class SwipeCard extends StatefulWidget {
   /// 右滑第一段松手：编辑
   final VoidCallback onEdit;
 
-  /// 左滑超过删除阈值松手：删除
-  final VoidCallback onDelete;
+  /// 左滑超过删除阈值松手：删除。
+  /// 为 null 时左滑不会删除，删除背景也不显示（用于系统默认规则）。
+  final VoidCallback? onDelete;
 
   /// 右滑第二段松手：复制卡片。
   /// 为 null 时右滑只有一段（编辑）。
@@ -119,9 +120,10 @@ class _SwipeCardState extends State<SwipeCard> {
         widget.onEdit();
       }
     } else if (direction == _SwipeDirection.left &&
+        widget.onDelete != null &&
         offset <= -_deleteThreshold) {
       HapticFeedback.mediumImpact();
-      widget.onDelete();
+      widget.onDelete!();
     }
   }
 
@@ -174,7 +176,7 @@ class _SwipeCardState extends State<SwipeCard> {
   }
 
   Widget _buildBackground() {
-    if (_direction == _SwipeDirection.left) {
+    if (_direction == _SwipeDirection.left && widget.onDelete != null) {
       return _buildSwipeBackground(
         icon: Icons.delete_outline,
         color: Colors.red,

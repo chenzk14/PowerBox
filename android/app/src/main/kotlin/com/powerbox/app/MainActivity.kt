@@ -1,8 +1,12 @@
 package com.powerbox.app
 
+import android.content.ComponentName
+import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.Context
+import android.provider.MediaStore
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -57,6 +61,14 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 "isManageStoragePermissionGranted" -> {
                     result.success(isManageStoragePermissionGranted())
+                }
+                "openFolder" -> {
+                    val folderPath = call.argument<String>("path")
+                    if (folderPath != null) {
+                        result.success(openFolder(folderPath))
+                    } else {
+                        result.error("INVALID_PATH", "文件夹路径无效", null)
+                    }
                 }
                 else -> result.notImplemented()
             }
@@ -184,6 +196,135 @@ class MainActivity : FlutterFragmentActivity() {
                 startActivity(intent)
             }
         }
+    }
+
+    /**
+     * 打开指定文件夹。
+     *
+     * 为什么不用之前的方式：
+     * 1. resource/folder 在本机没有任何应用声明支持，startActivity 只能落到应用选择器；
+     * 2. vnd.android.document/directory 只有系统 DocumentsUI 支持，小米文件管理器不支持，
+     *    所以选择器里看不到「文件管理」；
+     * 3. Android 11+ 的 ExternalStorageProvider 禁止访问 Android/data、Android/obb，
+     *    应用私有目录无法直接暴露给文件管理器。
+     *
+     * 因此应用私有目录会先用 MediaStore 复制到公共 Download/TodoList（无需存储权限），
+     * 再用 ExternalStorageProvider 的公共目录 URI + DocumentsUI 打开。
+     */
+    private fun openFolder(folderPath: String): Boolean {
+        val folder = File(folderPath)
+        if (!folder.exists()) return false
+
+        val publicRoot = Environment.getExternalStorageDirectory().absolutePath
+        val isPrivateDir = folderPath.contains("/Android/data/") ||
+            folderPath.contains("/Android/obb/")
+
+        val folderToOpen = if (isPrivateDir) {
+            // 应用私有目录：复制到公共 Download/TodoList 后再打开
+            copyFolderToPublicDownloads(folder) ?: return false
+        } else {
+            if (!folderPath.startsWith(publicRoot)) return false
+            folderPath
+        }
+
+        val relativePath = folderToOpen.removePrefix(publicRoot).trim('/')
+        val documentId = if (relativePath.isEmpty()) "primary:" else "primary:$relativePath"
+        val uri = Uri.parse(
+            "content://com.android.externalstorage.documents/document/" + Uri.encode(documentId)
+        )
+
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "vnd.android.document/directory")
+            // FilesActivity 只认 EXTRA_INITIAL_URI 作为初始目录，
+            // 只设置 data 会退回默认根目录（实测在 HyperOS 上如此）。
+            putExtra("android.provider.extra.INITIAL_URI", uri)
+            // 显式指定系统「文件」应用，避免弹出选择器
+            component = ComponentName(
+                "com.google.android.documentsui",
+                "com.android.documentsui.files.FilesActivity"
+            )
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        return try {
+            startActivity(intent)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /**
+     * 把应用私有目录里的文件复制到公共 Download/TodoList。
+     * Android 10+ 使用 MediaStore，无需 MANAGE_EXTERNAL_STORAGE 权限。
+     * 返回目标目录的绝对路径。
+     */
+    private fun copyFolderToPublicDownloads(folder: File): String? {
+        val relativePath = "${Environment.DIRECTORY_DOWNLOADS}/TodoList"
+        val files = folder.listFiles()?.filter { it.isFile } ?: return null
+        if (files.isEmpty()) return null
+
+        val publicDir = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            "TodoList"
+        )
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            // Android 10 以下直接写公共目录
+            if (!publicDir.exists() && !publicDir.mkdirs()) return null
+            files.forEach { source ->
+                try {
+                    source.copyTo(File(publicDir, source.name), overwrite = true)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            return publicDir.absolutePath
+        }
+
+        val resolver = contentResolver
+        val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        files.forEach { source ->
+            try {
+                // 先删除同名旧文件，避免出现 todo_data (1).json
+                resolver.query(
+                    collection,
+                    arrayOf(MediaStore.MediaColumns._ID),
+                    "${MediaStore.MediaColumns.RELATIVE_PATH}=? AND " +
+                        "${MediaStore.MediaColumns.DISPLAY_NAME}=?",
+                    arrayOf("$relativePath/", source.name),
+                    null
+                )?.use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val oldUri = ContentUris.withAppendedId(collection, cursor.getLong(0))
+                        resolver.delete(oldUri, null, null)
+                    }
+                }
+
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, source.name)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+                val uri = resolver.insert(collection, values) ?: return@forEach
+                try {
+                    resolver.openOutputStream(uri)?.use { out ->
+                        source.inputStream().use { it.copyTo(out) }
+                    }
+                    values.clear()
+                    values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                    resolver.update(uri, values, null, null)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    resolver.delete(uri, null, null)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return publicDir.absolutePath
     }
 
     private fun installApk(filePath: String): Boolean {

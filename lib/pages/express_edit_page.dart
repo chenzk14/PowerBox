@@ -4,6 +4,7 @@ import '../models/express_model.dart';
 import '../services/express_storage.dart';
 import '../utils/express_parser.dart';
 import '../utils/toast_util.dart';
+import 'express_rules_page.dart';
 
 /// 新增/编辑快递记录
 class ExpressEditPage extends StatefulWidget {
@@ -20,10 +21,7 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
   late final TextEditingController _nameController;
   late final TextEditingController _codeController;
   late final TextEditingController _stationController;
-  late final TextEditingController _addressController;
   late final TextEditingController _phoneTailController;
-  late final TextEditingController _noteController;
-  late bool _isPicked;
   bool _saving = false;
 
   bool get _isEditing => widget.entry != null;
@@ -35,10 +33,7 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
     _nameController = TextEditingController(text: entry?.name ?? '');
     _codeController = TextEditingController(text: entry?.code ?? '');
     _stationController = TextEditingController(text: entry?.station ?? '');
-    _addressController = TextEditingController(text: entry?.address ?? '');
     _phoneTailController = TextEditingController(text: entry?.phoneTail ?? '');
-    _noteController = TextEditingController(text: entry?.note ?? '');
-    _isPicked = entry?.isPicked ?? false;
   }
 
   @override
@@ -46,9 +41,7 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
     _nameController.dispose();
     _codeController.dispose();
     _stationController.dispose();
-    _addressController.dispose();
     _phoneTailController.dispose();
-    _noteController.dispose();
     super.dispose();
   }
 
@@ -60,7 +53,8 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
       return;
     }
 
-    final result = parseExpressText(text);
+    final rules = await ExpressStorage.loadEnabledRules();
+    final result = parseExpressTextWithRules(text, rules);
     if (result.isEmpty) {
       if (mounted) showToast(context, '未能识别出快递信息');
       return;
@@ -70,11 +64,13 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
       if (result.name.isNotEmpty) _nameController.text = result.name;
       if (result.code.isNotEmpty) _codeController.text = result.code;
       if (result.station.isNotEmpty) _stationController.text = result.station;
-      if (result.address.isNotEmpty) _addressController.text = result.address;
       if (result.phoneTail.isNotEmpty) _phoneTailController.text = result.phoneTail;
     });
 
-    if (mounted) showToast(context, '已识别，请核对内容');
+    final hint = result.usedRuleName != null
+        ? '已使用规则「${result.usedRuleName}」识别，请核对内容'
+        : '已识别，请核对内容';
+    if (mounted) showToast(context, hint);
   }
 
   Future<void> _save() async {
@@ -94,10 +90,9 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
         name: name,
         code: code,
         station: _stationController.text.trim(),
-        address: _addressController.text.trim(),
         phoneTail: _phoneTailController.text.trim(),
-        note: _noteController.text.trim(),
-        isPicked: _isPicked,
+        // 新增/编辑均默认未取件
+        isPicked: false,
       );
 
       if (_isEditing) {
@@ -115,34 +110,15 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
     }
   }
 
-  Future<void> _confirmDelete() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除记录'),
-        content: const Text('确定要删除这条快递记录吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+  /// 跳转规则管理
+  Future<void> _openRules() async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => const ExpressRulesPage()),
     );
-
-    if (confirmed != true) return;
-
-    try {
-      await ExpressStorage.deleteEntry(widget.entry!.id);
-      if (!mounted) return;
-      Navigator.pop(context, true);
-    } catch (e) {
-      if (!mounted) return;
-      showToast(context, '删除失败: $e');
+    if (changed == true) {
+      // 规则变更无需重新加载，仅提示
+      if (mounted) showToast(context, '规则已更新');
     }
   }
 
@@ -156,19 +132,17 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
             _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 80),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildPasteCard(),
+                    // 规则编辑入口（位于原来剪贴板识别卡片的位置）
+                    _buildRuleEntryCard(),
                     const SizedBox(height: 16),
                     _buildFormCard(),
                     const SizedBox(height: 24),
-                    _buildSaveButton(),
-                    if (_isEditing) ...[
-                      const SizedBox(height: 12),
-                      _buildDeleteButton(),
-                    ],
+                    // 底部操作行：左边剪贴板识别，右边保存（放在表单下方，随页面滚动）
+                    _buildBottomBar(),
                   ],
                 ),
               ),
@@ -182,26 +156,22 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      child: Row(
-        children: [
-          Text(
-            _isEditing ? '编辑快递' : '新增快递',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF333333),
-            ),
-          ),
-        ],
+      child: Text(
+        _isEditing ? '编辑快递' : '新增快递',
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF333333),
+        ),
       ),
     );
   }
 
-  /// 剪贴板识别入口：复制快递短信后一键填入
-  Widget _buildPasteCard() {
+  /// 规则编辑入口卡片（位于页面顶部）
+  Widget _buildRuleEntryCard() {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: _parseFromClipboard,
+      onTap: _openRules,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
@@ -212,7 +182,7 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
         child: Row(
           children: [
             const Icon(
-              Icons.content_paste_search,
+              Icons.tune,
               size: 22,
               color: Color(0xFF333333),
             ),
@@ -222,7 +192,7 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '从剪贴板识别',
+                    '剪切板识别不准确？自定义解析规则',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -231,7 +201,7 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
                   ),
                   SizedBox(height: 2),
                   Text(
-                    '复制快递短信后点击，自动填写取件码与地址',
+                    '自定义短信正则，适配不同快递格式',
                     style: TextStyle(
                       fontSize: 13,
                       color: Color(0xFF8E8E93),
@@ -279,13 +249,6 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
           ),
           _buildDivider(),
           _buildTextField(
-            controller: _addressController,
-            label: '收货地址',
-            hint: '详细地址',
-            maxLines: 2,
-          ),
-          _buildDivider(),
-          _buildTextField(
             controller: _phoneTailController,
             label: '手机尾号',
             hint: '后四位',
@@ -294,35 +257,6 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(4),
             ],
-          ),
-          _buildDivider(),
-          _buildTextField(
-            controller: _noteController,
-            label: '备注',
-            hint: '可选',
-          ),
-          _buildDivider(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    '已取件',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF333333),
-                    ),
-                  ),
-                ),
-                Switch(
-                  value: _isPicked,
-                  activeThumbColor: const Color(0xFF333333),
-                  onChanged: (value) => setState(() => _isPicked = value),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -368,52 +302,69 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
     );
   }
 
-  Widget _buildSaveButton() {
-    return SizedBox(
-      height: 50,
-      child: ElevatedButton(
-        onPressed: _saving ? null : _save,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF333333),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: _saving
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
+  /// 底部操作行：左边剪贴板识别，右边保存
+  Widget _buildBottomBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 50,
+              child: OutlinedButton(
+                onPressed: _parseFromClipboard,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF333333),
+                  side: const BorderSide(color: Color(0xFFE1E1E1)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              )
-            : const Text(
-                '保存',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.content_paste, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      '从剪贴板识别',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
               ),
-      ),
-    );
-  }
-
-  Widget _buildDeleteButton() {
-    return SizedBox(
-      height: 50,
-      child: OutlinedButton(
-        onPressed: _confirmDelete,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.red,
-          side: const BorderSide(color: Color(0xFFE1E1E1)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            ),
           ),
-        ),
-        child: const Text(
-          '删除记录',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _saving ? null : _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF333333),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        '保存',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

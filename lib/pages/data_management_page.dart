@@ -11,6 +11,7 @@ import '../utils/toast_util.dart';
 import '../services/update_service.dart';
 import '../services/password_storage.dart';
 import '../services/app_settings.dart';
+import '../services/data_refresh_notifier.dart';
 
 class DataManagementPage extends StatefulWidget {
   const DataManagementPage({super.key});
@@ -23,7 +24,6 @@ class DataManagementPageState extends State<DataManagementPage> {
   Map<String, dynamic> _fileInfo = {};
   bool _isLoading = false;
   String _currentVersion = '';
-  bool _hasUpdate = false;
   bool _expressAuthEnabled = true;
   @override
   void initState() {
@@ -55,14 +55,6 @@ class DataManagementPageState extends State<DataManagementPage> {
     setState(() {
       _currentVersion = packageInfo.version;
     });
-    
-    // 检查是否有新版本
-    final updateInfo = await UpdateService.checkForUpdate();
-    if (updateInfo != null && mounted) {
-      setState(() {
-        _hasUpdate = true;
-      });
-    }
   }
 
   Future<void> loadFileInfo() async {
@@ -73,20 +65,29 @@ class DataManagementPageState extends State<DataManagementPage> {
   }
 
 
-  Future<void> _exportData() async {
+  /// 备份打卡和密码数据到根目录 PowerBox_Backups
+  Future<void> _backupAllData() async {
     setState(() {
       _isLoading = true;
     });
     try {
-      final events = await LocalStorage.loadEvents();
-      if (events.isEmpty) {
-        showToast(context, '没有数据可以导出');
+      // 写入存储根目录需要所有文件访问权限
+      final granted = await FileStorage.isManageStoragePermissionGranted();
+      if (!granted) {
+        await FileStorage.requestManageStoragePermission();
+        showToast(context, '请授予所有文件访问权限后重试');
         return;
       }
-      final exportFile = await FileStorage.exportDataToInternalStorage(events);
-      showToast(context, '数据已导出到: ${exportFile.path}');
+
+      final events = await LocalStorage.loadEvents();
+      final passwordData = await PasswordStorage.exportPasswordData();
+      await FileStorage.backupAll(
+        events: events,
+        passwordData: passwordData,
+      );
+      showToast(context, '数据已备份到 PowerBox_Backups 文件夹');
     } catch (e) {
-      showToast(context, '导出失败: $e');
+      showToast(context, '备份失败: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -121,6 +122,9 @@ class DataManagementPageState extends State<DataManagementPage> {
 
           showToast(context, '成功导入 ${events.length} 条数据');
 
+          // 通知常驻的首页和统计页重新加载
+          notifyDataChanged();
+
           loadFileInfo();
         } else {
           if (file.bytes != null) {
@@ -146,6 +150,9 @@ class DataManagementPageState extends State<DataManagementPage> {
 
             showToast(context, '成功导入 ${events.length} 条数据');
 
+            // 通知常驻的首页和统计页重新加载
+            notifyDataChanged();
+
             loadFileInfo();
           } else {
             showToast(context, '无法读取文件内容');
@@ -159,38 +166,6 @@ class DataManagementPageState extends State<DataManagementPage> {
         _isLoading = false;
       });
     }
-  }
-
-  void _showExportDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('导出数据'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.event, color: Color(0xFF333333)),
-              title: Text('打卡数据'),
-              subtitle: Text('导出事件记录为 JSON 文件'),
-              onTap: () {
-                Navigator.pop(context);
-                _exportData();
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.lock, color: Color(0xFF333333)),
-              title: Text('密码数据'),
-              subtitle: Text('导出加密后的密码数据及密钥'),
-              onTap: () {
-                Navigator.pop(context);
-                _exportPasswordData();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showImportDialog() {
@@ -225,16 +200,6 @@ class DataManagementPageState extends State<DataManagementPage> {
     );
   }
 
-  Future<void> _exportPasswordData() async {
-    try {
-      final data = await PasswordStorage.exportPasswordData();
-      final exportFile = await FileStorage.exportPasswordDataToInternalStorage(data);
-      showToast(context, '密码数据已导出到: ${exportFile.path}');
-    } catch (e) {
-      showToast(context, '导出密码数据失败: $e');
-    }
-  }
-
   Future<void> _importPasswordData() async {
     setState(() {
       _isLoading = true;
@@ -257,6 +222,8 @@ class DataManagementPageState extends State<DataManagementPage> {
           }
           await PasswordStorage.importPasswordData(data);
           showToast(context, '密码数据导入成功');
+          // 通知常驻的密码页重新加载
+          notifyDataChanged();
         } else {
           showToast(context, '无法读取文件内容');
         }
@@ -349,63 +316,91 @@ class DataManagementPageState extends State<DataManagementPage> {
   }
 
   Widget _buildFileInfoCard() {
-    return _buildGroupCard(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  size: 18,
-                  color: Color(0xFF8E8E93),
-                ),
-                SizedBox(width: 8),
-                Text(
-                  '数据文件信息',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF333333),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 12),
-            if (_fileInfo['exists'] == true)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      // 点击整张卡片用文件管理器打开数据文件所在文件夹
+      onTap: _openFileFolder,
+      child: _buildGroupCard(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  _buildInfoRow('文件路径', '${_fileInfo['path']}'),
-                  SizedBox(height: 8),
-                  _buildInfoRow('文件大小', '${_fileInfo['size']} bytes'),
-                  SizedBox(height: 8),
-                  _buildInfoRow('修改时间', '${_fileInfo['modified']}'),
-                ],
-              )
-            else
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Center(
-                  child: Text(
-                    '暂无数据文件',
+                  Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: Color(0xFF8E8E93),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    '数据文件信息',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF333333),
+                    ),
+                  ),
+                  Spacer(),
+                  Text(
+                    '导出并打开文件夹',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF999999),
+                      color: Color(0xFF8E8E93),
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: Color(0xFFC7C7CC),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12),
+              if (_fileInfo['exists'] == true)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInfoRow('文件路径', '${_fileInfo['path']}'),
+                    SizedBox(height: 8),
+                    _buildInfoRow('文件大小', '${_fileInfo['size']} bytes'),
+                  ],
+                )
+              else
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '暂无数据文件',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF999999),
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  /// 导出数据文件并用系统文件管理器打开所在目录。
+  /// Android 11+ 无法直接访问应用私有目录，因此原生侧会先复制到公共目录 Download/TodoList。
+  Future<void> _openFileFolder() async {
+    final opened = await FileStorage.openDataFolder();
+    if (!mounted) return;
+    if (opened) {
+      showToast(context, '数据文件已复制到 下载/TodoList');
+    } else {
+      showToast(context, '未能打开文件管理器');
+    }
   }
 
   Widget _buildInfoRow(String label, String value) {
@@ -473,7 +468,7 @@ class DataManagementPageState extends State<DataManagementPage> {
     );
   }
 
-  /// 数据管理：导入、导出
+  /// 数据管理：备份、导入
   Widget _buildDataSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -483,16 +478,14 @@ class DataManagementPageState extends State<DataManagementPage> {
           child: Column(
             children: [
               _buildSettingTile(
-                icon: Icons.import_export,
-                title: '导出数据',
-                subtitle: '导出为 JSON 文件',
-                onTap: _showExportDialog,
+                icon: Icons.backup_outlined,
+                title: '备份数据',
+                onTap: _backupAllData,
               ),
               _buildGroupDivider(),
               _buildSettingTile(
                 icon: Icons.file_download,
                 title: '导入数据',
-                subtitle: '从 JSON 文件导入',
                 onTap: _showImportDialog,
               ),
             ],
@@ -668,8 +661,6 @@ class DataManagementPageState extends State<DataManagementPage> {
           child: _buildSettingTile(
             icon: Icons.system_update,
             title: '检查版本更新',
-            subtitle: _hasUpdate ? '发现新版本，点击更新' : '检查是否有新版本',
-            subtitleColor: _hasUpdate ? Colors.red : null,
             onTap: _checkUpdate,
           ),
         ),
@@ -765,14 +756,8 @@ class DataManagementPageState extends State<DataManagementPage> {
     final updateInfo = await UpdateService.checkForUpdate();
     
     if (updateInfo != null && mounted) {
-      setState(() {
-        _hasUpdate = true;
-      });
       UpdateService.showUpdateDialog(context, updateInfo);
     } else if (mounted) {
-      setState(() {
-        _hasUpdate = false;
-      });
       showToast(context, '当前已是最新版本');
     }
   }

@@ -3,6 +3,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
 import '../models/password_model.dart';
 import '../services/app_icon_catalog.dart';
+import '../services/data_refresh_notifier.dart';
 import '../services/password_storage.dart';
 import '../utils/toast_util.dart';
 import '../widgets/app_icon_picker.dart';
@@ -39,6 +40,15 @@ class PasswordManagerPageState extends State<PasswordManagerPage> {
       _authenticateAndLoad();
     }
     _searchController.addListener(_onSearchChanged);
+    // 导入密码数据后，常驻的密码页需要主动刷新
+    dataRefreshNotifier.addListener(_onDataChanged);
+  }
+
+  void _onDataChanged() {
+    // 未解锁时不主动加载，等切换到密码页时统一认证
+    if (_isAuthenticated) {
+      _loadPasswords();
+    }
   }
 
   /// 供外部（底部 Tab 切换）调用，未认证时触发身份验证
@@ -49,6 +59,7 @@ class PasswordManagerPageState extends State<PasswordManagerPage> {
 
   @override
   void dispose() {
+    dataRefreshNotifier.removeListener(_onDataChanged);
     _searchController.dispose();
     super.dispose();
   }
