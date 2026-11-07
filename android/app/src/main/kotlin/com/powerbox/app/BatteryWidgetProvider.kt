@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.core.content.ContextCompat
+import android.os.Build
 import java.util.Locale
 
 /**
@@ -206,14 +207,14 @@ class BatteryWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        // 小组件添加/更新时，刷新并（重）排分钟级定时
+        // 小组件添加/更新时，启动前台服务并刷新
+        startMonitorService(context)
         WidgetTickScheduler.refreshSchedule(context)
         updateAll(context)
     }
 
     override fun onDisabled(context: Context) {
         // 最后一个电池小组件移除时，连同/时钟一起判断是否还要保留定时刷新
-        // （保留刷新与否看两个小组件是否都被移除）
         WidgetTickScheduler.refreshSchedule(context)
         super.onDisabled(context)
     }
@@ -222,10 +223,21 @@ class BatteryWidgetProvider : AppWidgetProvider() {
         when (intent.action) {
             ACTION_REFRESH,
             Intent.ACTION_BOOT_COMPLETED -> {
+                startMonitorService(context)
                 WidgetTickScheduler.refreshSchedule(context)
                 updateAll(context)
             }
         }
         super.onReceive(context, intent)
+    }
+
+    /** 启动电池监控前台服务（Android 8+ 需要 startForegroundService） */
+    private fun startMonitorService(context: Context) {
+        val intent = Intent(context, BatteryMonitorService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
     }
 }

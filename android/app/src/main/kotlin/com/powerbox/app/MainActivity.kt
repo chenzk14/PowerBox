@@ -69,6 +69,7 @@ class MainActivity : FlutterFragmentActivity() {
                     "getBatteryInfo" -> result.success(readBatteryInfo())
                     "refreshWidget" -> {
                         BatteryWidgetProvider.updateAll(applicationContext)
+                        startMonitorService(applicationContext)
                         result.success(true)
                     }
                     else -> result.notImplemented()
@@ -189,7 +190,7 @@ class MainActivity : FlutterFragmentActivity() {
         try {
             val file = File(filePath)
             if (!file.exists()) {
-                return false
+                return false;
             }
 
             val intent = Intent(Intent.ACTION_VIEW)
@@ -213,6 +214,16 @@ class MainActivity : FlutterFragmentActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
             return false
+        }
+    }
+
+    /** 启动电池监控前台服务（Android 8+ 需要 startForegroundService） */
+    private fun startMonitorService(context: Context) {
+        val intent = Intent(context, BatteryMonitorService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
         }
     }
 }

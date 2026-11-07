@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.BatteryManager
+import android.os.Build
 import android.widget.RemoteViews
 import androidx.core.content.ContextCompat
 
@@ -162,10 +163,21 @@ class ClockWidgetProvider : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED -> {
+                startMonitorService(context)
                 WidgetTickScheduler.refreshSchedule(context)
                 updateAll(context)
             }
         }
         super.onReceive(context, intent)
+    }
+
+    /** 启动电池监控前台服务（Android 8+ 需要 startForegroundService） */
+    private fun startMonitorService(context: Context) {
+        val intent = Intent(context, BatteryMonitorService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
     }
 }

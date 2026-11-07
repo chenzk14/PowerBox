@@ -9,11 +9,10 @@
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <!-- 安装未知应用权限 -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <!-- 小组件定时刷新（仅用于电量）。注意：Android 14+ 新安装应用默认不授予
-         SCHEDULE_EXACT_ALARM，代码里已做降级（canScheduleExactAlarms 判断 + 非精确闹钟）。
-         时钟时间本身由 TextClock 自动走时，不依赖此权限。 -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <!-- 开机后恢复小组件的定时刷新 -->
+    <!-- 前台服务（保证电池小组件实时刷新） -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- 开机后启动电池监控服务 -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     
     <application
@@ -103,6 +102,12 @@
                 <action android:name="com.powerbox.app.ACTION_WIDGET_TICK" />
             </intent-filter>
         </receiver>
+
+        <!-- 电池监控前台服务：常驻接收 ACTION_BATTERY_CHANGED，实时刷新电池小组件 -->
+        <service
+            android:name=".BatteryMonitorService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
     </application>
     <!-- Required to query activities that can process text, see:
