@@ -44,8 +44,9 @@ class BatteryMonitorService : Service() {
         batteryReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent?) {
                 if (intent?.action == Intent.ACTION_BATTERY_CHANGED) {
-                    // 电池状态变化：立即刷新电池小组件
+                    // 电池状态变化：立即刷新电池小组件和时钟小组件的电量
                     BatteryWidgetProvider.updateAll(context)
+                    ClockWidgetProvider.updateAll(context)
                 }
             }
         }
