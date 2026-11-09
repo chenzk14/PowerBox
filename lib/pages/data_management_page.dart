@@ -12,6 +12,7 @@ import '../services/update_service.dart';
 import '../services/password_storage.dart';
 import '../services/app_settings.dart';
 import '../services/data_refresh_notifier.dart';
+import '../services/task_service.dart';
 
 class DataManagementPage extends StatefulWidget {
   const DataManagementPage({super.key});
@@ -25,6 +26,8 @@ class DataManagementPageState extends State<DataManagementPage> {
   bool _isLoading = false;
   String _currentVersion = '';
   bool _expressAuthEnabled = true;
+  // 是否在最近任务中隐藏 PowerBox 卡片（原生侧持久化并立即生效）
+  bool _hideFromRecents = false;
   @override
   void initState() {
     super.initState();
@@ -36,9 +39,11 @@ class DataManagementPageState extends State<DataManagementPage> {
   /// 加载工具相关设置
   Future<void> _loadToolSettings() async {
     final expressAuth = await AppSettings.getExpressAuthEnabled();
+    final hideFromRecents = await TaskService.isHideFromRecents();
     if (!mounted) return;
     setState(() {
       _expressAuthEnabled = expressAuth;
+      _hideFromRecents = hideFromRecents;
     });
   }
 
@@ -48,6 +53,52 @@ class DataManagementPageState extends State<DataManagementPage> {
       _expressAuthEnabled = value;
     });
     await AppSettings.setExpressAuthEnabled(value);
+  }
+
+  /// 切换「隐藏最近任务卡片」。
+  ///
+  /// 开启前先确认：应用无法替用户锁定后台，锁定需要手动在最近任务里完成；
+  /// 隐藏后最近任务看不到本应用，只能从桌面图标回到本页关闭。
+  Future<void> _setHideFromRecents(bool value) async {
+    if (value) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text('隐藏后台任务卡片'),
+          content: Text(
+            '开启后，最近任务中将不再显示 PowerBox 卡片。\n\n'
+            '建议先在最近任务里把 PowerBox 卡片下拉锁定，再开启本开关；'
+            '隐藏本身不会阻止系统清理后台。\n\n'
+            '隐藏后如需关闭，请从桌面图标进入「设置」本页操作。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text('取消'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text('开启'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
+    setState(() {
+      _hideFromRecents = value;
+    });
+    final applied = await TaskService.setHideFromRecents(value);
+    if (!mounted) return;
+    if (!applied) {
+      showToast(context, '设置已保存，重启 App 后生效');
+    } else {
+      showToast(
+        context,
+        value ? '已隐藏，最近任务中将不再显示 PowerBox' : '已恢复在最近任务中显示',
+      );
+    }
   }
 
   Future<void> _loadVersionInfo() async {
@@ -495,19 +546,31 @@ class DataManagementPageState extends State<DataManagementPage> {
     );
   }
 
-  /// 工具：快递页身份验证开关
+  /// 工具：快递页身份验证、隐藏最近任务卡片
   Widget _buildToolsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle('工具'),
         _buildGroupCard(
-          child: _buildSwitchTile(
-            icon: Icons.fingerprint,
-            title: '快递页身份验证',
-            subtitle: '进入快递管理时验证身份，关闭后直接查看',
-            value: _expressAuthEnabled,
-            onChanged: _setExpressAuth,
+          child: Column(
+            children: [
+              _buildSwitchTile(
+                icon: Icons.fingerprint,
+                title: '快递页身份验证',
+                subtitle: '进入快递管理时验证身份，关闭后直接查看',
+                value: _expressAuthEnabled,
+                onChanged: _setExpressAuth,
+              ),
+              _buildGroupDivider(),
+              _buildSwitchTile(
+                icon: Icons.visibility_off_outlined,
+                title: '隐藏后台任务卡片',
+                subtitle: '从最近任务中隐藏，避免被误滑清理；建议先锁定再开启',
+                value: _hideFromRecents,
+                onChanged: _setHideFromRecents,
+              ),
+            ],
           ),
         ),
       ],

@@ -1,5 +1,6 @@
 package com.powerbox.app
 
+import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.ContentUris
 import android.content.ContentValues
@@ -23,9 +24,17 @@ class MainActivity : FlutterFragmentActivity() {
     private val CHANNEL = "com.powerbox.app/installer"
     private val SHORTCUT_CHANNEL = "com.powerbox.app/shortcut"
     private val BATTERY_CHANNEL = "com.powerbox.app/battery"
+    private val TASK_CHANNEL = "com.powerbox.app/task"
     private val ACTION_EXPRESS = "com.powerbox.app.SHORTCUT_EXPRESS"
 
+    /** 「隐藏最近任务卡片」的执行状态：原生侧独立存一份，保证 Activity 一启动就能套用 */
+    private val PREFS_NAME = "powerbox_prefs"
+    private val KEY_HIDE_FROM_RECENTS = "hide_from_recents"
+
     private var shortcutChannel: MethodChannel? = null
+
+    // 是否已把「隐藏最近任务卡片」应用到当前任务，避免 onPostResume 反复执行
+    private var hideFromRecentsApplied = false
 
     // 冷启动时 Flutter 还没就绪，先缓存快捷方式动作，等 Dart 侧主动拉取
     private var pendingShortcut: String? = null
@@ -39,6 +48,17 @@ class MainActivity : FlutterFragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleShortcutIntent(intent)
+        // 热启动时任务可能被重建，重新套用一次隐藏设置
+        hideFromRecentsApplied = applyHideFromRecents()
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        // 首次启动时 appTasks 可能还没就绪，这里再试一次；
+        // 只有真正拿到任务并处理后才置位，避免任务列表为空时错过
+        if (!hideFromRecentsApplied) {
+            hideFromRecentsApplied = applyHideFromRecents()
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -88,6 +108,28 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
 
+        // 最近任务卡片隐藏通道
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TASK_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isHideFromRecents" -> {
+                        val value = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                            .getBoolean(KEY_HIDE_FROM_RECENTS, false)
+                        result.success(value)
+                    }
+                    "setHideFromRecents" -> {
+                        val value = call.argument<Boolean>("value") ?: false
+                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                            .putBoolean(KEY_HIDE_FROM_RECENTS, value)
+                            .apply()
+                        // 立即对当前任务生效；返回是否真的拿到了任务
+                        hideFromRecentsApplied = applyHideFromRecents()
+                        result.success(hideFromRecentsApplied)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
         // 桌面快捷方式通道
         shortcutChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SHORTCUT_CHANNEL)
         shortcutChannel?.setMethodCallHandler { call, result ->
@@ -109,6 +151,29 @@ class MainActivity : FlutterFragmentActivity() {
             // 热启动时 Dart 侧已就绪，直接推送；冷启动时由 pendingShortcut 兜底
             shortcutChannel?.invokeMethod("onShortcut", "express")
         }
+    }
+
+    /**
+     * 把「隐藏最近任务卡片」设置应用到当前 App 的所有任务。
+     *
+     * 说明：
+     * - setExcludeFromRecents 只影响「最近任务」列表是否显示，任务本身仍在运行；
+     * - 应用无法替用户「锁定后台」，锁定需要在最近任务里手动下拉卡片；
+     * - 返回 true 表示至少拿到了一个任务并尝试应用。
+     */
+    private fun applyHideFromRecents(): Boolean {
+        val enabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean(KEY_HIDE_FROM_RECENTS, false)
+        val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val tasks = manager.appTasks
+        tasks.forEach { task ->
+            try {
+                task.setExcludeFromRecents(enabled)
+            } catch (_: Exception) {
+                // 个别 ROM 可能不支持，跳过该任务，不影响其余任务
+            }
+        }
+        return tasks.isNotEmpty()
     }
 
     /** 通过 BatteryManager 读取实时电池数据（电池信息页对照展示用） */
