@@ -5,27 +5,29 @@ import 'package:path_provider/path_provider.dart';
 import '../models/event_model.dart';
 
 class FileStorage {
-  static const String _fileName = 'todo_data.json';
+  static const String _fileName = 'powerbox.json';
+  // 旧版本使用的数据文件名，首次启动时迁移到 powerbox.json
+  static const String _legacyFileName = 'todo_data.json';
   static const String _backupFileName = 'todo_data_backup.json';
-  static const String _exportDirName = 'TodoList';
-  // 备份目录固定为 /storage/emulated/0/PowerBox_Backups
-  static const String _backupDirName = 'PowerBox_Backups';
+  // 备份和导出统一到公共下载目录 /storage/emulated/0/Download
+  static const String _downloadDirName = 'Download';
 
   // 与原生 installer 通道复用，用于打开数据文件夹
   static const MethodChannel _channel = MethodChannel('com.powerbox.app/installer');
 
-  // 导出目录固定为 /storage/emulated/0/TodoList
+  // 导出目录统一为公共下载目录
   static Future<Directory> get _exportDirectory async {
-    final dir = Directory('/storage/emulated/0/$_exportDirName');
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dir;
+    return _publicDownloadDirectory;
   }
 
-  // 备份目录固定为 /storage/emulated/0/PowerBox_Backups
+  // 备份目录统一为公共下载目录
   static Future<Directory> get _backupDirectory async {
-    final dir = Directory('/storage/emulated/0/$_backupDirName');
+    return _publicDownloadDirectory;
+  }
+
+  // 公共下载目录：/storage/emulated/0/Download
+  static Future<Directory> get _publicDownloadDirectory async {
+    final dir = Directory('/storage/emulated/0/$_downloadDirName');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
@@ -48,8 +50,29 @@ class FileStorage {
 
   // 获取数据文件路径
   static Future<File> get _dataFile async {
-    final directory = await _storageDirectory;
-    return File('${directory.path}/$_fileName');
+    return _resolveDataFile(await _storageDirectory);
+  }
+
+  /// 解析数据文件，并在新文件不存在时把旧版 todo_data.json 迁移过来。
+  /// 重命名失败则复制一份，保证老用户数据不会因为改名丢失。
+  static Future<File> _resolveDataFile(Directory directory) async {
+    final file = File('${directory.path}/$_fileName');
+    if (await file.exists()) return file;
+
+    final legacy = File('${directory.path}/$_legacyFileName');
+    if (await legacy.exists()) {
+      try {
+        await legacy.rename(file.path);
+      } catch (e) {
+        print('重命名旧数据文件失败，改为复制: $e');
+        try {
+          await legacy.copy(file.path);
+        } catch (copyError) {
+          print('复制旧数据文件失败: $copyError');
+        }
+      }
+    }
+    return file;
   }
 
   // 获取备份文件路径
@@ -93,7 +116,7 @@ class FileStorage {
       // 如果保存到根目录失败，尝试保存到应用文档目录
       try {
         final appDir = await getApplicationDocumentsDirectory();
-        final fallbackFile = File('${appDir.path}/$_fileName');
+        final fallbackFile = await _resolveDataFile(appDir);
         final eventList = events.map((event) => event.toJson()).toList();
         final jsonData = json.encode({
           'version': '1.0',
@@ -124,7 +147,7 @@ class FileStorage {
       
       // 如果根目录文件不存在，尝试从应用文档目录加载（回退位置）
       final appDir = await getApplicationDocumentsDirectory();
-      final fallbackFile = File('${appDir.path}/$_fileName');
+      final fallbackFile = await _resolveDataFile(appDir);
       if (await fallbackFile.exists()) {
         print('从应用文档目录加载文件: ${fallbackFile.path}');
         final contents = await fallbackFile.readAsString();
@@ -158,15 +181,11 @@ class FileStorage {
     }
   }
 
-  // 导出密码数据到应用内部存储目录（无需外部存储权限）
+  // 导出密码数据到公共下载目录
   static Future<File> exportPasswordDataToInternalStorage(Map<String, String> data) async {
     try {
-      final directory = await _storageDirectory;
-      final exportDir = Directory('${directory.path}/TodoList');
-      if (!await exportDir.exists()) {
-        await exportDir.create(recursive: true);
-      }
-      final exportFile = File('${exportDir.path}/password_data_export_${DateTime.now().millisecondsSinceEpoch}.json');
+      final directory = await _exportDirectory;
+      final exportFile = File('${directory.path}/password_data_export_${DateTime.now().millisecondsSinceEpoch}.json');
       final jsonData = json.encode({
         'version': '1.0',
         'exportedAt': DateTime.now().toIso8601String(),
@@ -202,15 +221,11 @@ class FileStorage {
     }
   }
 
-  // 导出打卡数据到应用内部存储目录（无需外部存储权限）
+  // 导出打卡数据到公共下载目录
   static Future<File> exportDataToInternalStorage(List<Event> events) async {
     try {
-      final directory = await _storageDirectory;
-      final exportDir = Directory('${directory.path}/TodoList');
-      if (!await exportDir.exists()) {
-        await exportDir.create(recursive: true);
-      }
-      final exportFile = File('${exportDir.path}/todo_data_export_${DateTime.now().millisecondsSinceEpoch}.json');
+      final directory = await _exportDirectory;
+      final exportFile = File('${directory.path}/todo_data_export_${DateTime.now().millisecondsSinceEpoch}.json');
       final eventList = events.map((event) => event.toJson()).toList();
       final jsonData = json.encode({
         'version': '1.0',
@@ -308,56 +323,78 @@ class FileStorage {
     }
   }
 
-  /// 备份打卡和密码数据到根目录 PowerBox_Backups
-  /// 返回生成的两个文件路径
-  static Future<List<String>> backupAll({
+  /// 备份打卡和密码数据到公共下载目录，合并成一个 JSON 文件。
+  /// 返回生成的文件路径。
+  static Future<String> backupAll({
     required List<Event> events,
     required Map<String, String> passwordData,
   }) async {
     final directory = await _backupDirectory;
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final exportedAt = DateTime.now().toIso8601String();
+    final now = DateTime.now();
 
-    // 打卡数据
-    final eventList = events.map((event) => event.toJson()).toList();
-    final eventsFile = File('${directory.path}/todo_data_$timestamp.json');
-    await eventsFile.writeAsString(json.encode({
-      'version': '1.0',
-      'exportedAt': exportedAt,
-      'totalEvents': events.length,
-      'events': eventList,
+    // 打卡和密码写在同一个文件里，密码部分仍然是加密后的内容
+    final file = File(
+      '${directory.path}/PowerBox_Backup_${_formatTimestamp(now)}.json',
+    );
+    await file.writeAsString(json.encode({
+      'version': '2.0',
+      'exportedAt': now.toIso8601String(),
+      'events': events.map((event) => event.toJson()).toList(),
+      'passwords': passwordData['passwords'] ?? '',
+      'encryptionKey': passwordData['encryptionKey'] ?? '',
+      'encryptionIv': passwordData['encryptionIv'] ?? '',
     }));
 
-    // 密码数据（加密内容 + 密钥 + IV）
-    final passwordFile = File('${directory.path}/password_data_$timestamp.json');
-    await passwordFile.writeAsString(json.encode({
-      'version': '1.0',
-      'exportedAt': exportedAt,
-      'passwords': passwordData['passwords'],
-      'encryptionKey': passwordData['encryptionKey'],
-      'encryptionIv': passwordData['encryptionIv'],
-    }));
-
-    return [eventsFile.path, passwordFile.path];
+    return file.path;
   }
 
-  /// 用系统文件管理器打开数据文件所在目录。
-  ///
-  /// Android 11+ 无法直接访问应用私有目录（Android/data），
-  /// 原生侧会先把文件复制到公共 Download/TodoList，再打开该目录。
-  static Future<bool> openDataFolder() async {
-    try {
-      final file = await _dataFile;
-      final folder = file.parent;
-      if (!await folder.exists()) return false;
-      final result = await _channel.invokeMethod<bool>('openFolder', {
-        'path': folder.path,
-      });
-      return result ?? false;
-    } catch (e) {
-      print('打开数据文件夹失败: $e');
-      return false;
+  /// 读取备份文件，返回 { events: List<Event>?, passwordData: Map<String, String>? }
+  static Future<Map<String, dynamic>> readBackupFile(File file) async {
+    final contents = await file.readAsString();
+    return parseBackupContent(contents);
+  }
+
+  /// 解析备份内容，兼容三种格式：
+  /// 1. 新版合并格式：events + passwords + key/iv
+  /// 2. 旧版打卡/密码分开格式：只有 events 或只有 passwords
+  /// 3. 更早的纯事件数组格式：[{...}, {...}]
+  static Map<String, dynamic> parseBackupContent(String contents) {
+    final decoded = json.decode(contents);
+    final result = <String, dynamic>{};
+
+    if (decoded is List) {
+      result['events'] =
+          decoded.map((eventJson) => Event.fromJson(eventJson)).toList();
+      return result;
     }
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('文件格式不正确');
+    }
+
+    final rawEvents = decoded['events'];
+    if (rawEvents is List) {
+      result['events'] = rawEvents
+          .map((eventJson) => Event.fromJson(eventJson))
+          .toList();
+    }
+
+    final passwords = decoded['passwords'];
+    if (passwords is String && passwords.isNotEmpty) {
+      result['passwordData'] = <String, String>{
+        'passwords': passwords,
+        'encryptionKey': (decoded['encryptionKey'] ?? '').toString(),
+        'encryptionIv': (decoded['encryptionIv'] ?? '').toString(),
+      };
+    }
+
+    return result;
+  }
+
+  static String _formatTimestamp(DateTime time) {
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '${time.year}${two(time.month)}${two(time.day)}_'
+        '${two(time.hour)}${two(time.minute)}${two(time.second)}';
   }
 
   // 删除数据文件（谨慎使用）

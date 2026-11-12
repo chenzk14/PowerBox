@@ -10,9 +10,9 @@ import '../services/local_storage.dart';
 import '../utils/toast_util.dart';
 import '../services/update_service.dart';
 import '../services/password_storage.dart';
-import '../services/app_settings.dart';
 import '../services/data_refresh_notifier.dart';
 import '../services/task_service.dart';
+import '../services/keep_alive_service.dart';
 
 class DataManagementPage extends StatefulWidget {
   const DataManagementPage({super.key});
@@ -21,38 +21,51 @@ class DataManagementPage extends StatefulWidget {
   DataManagementPageState createState() => DataManagementPageState();
 }
 
-class DataManagementPageState extends State<DataManagementPage> {
+class DataManagementPageState extends State<DataManagementPage>
+    with WidgetsBindingObserver {
   Map<String, dynamic> _fileInfo = {};
   bool _isLoading = false;
   String _currentVersion = '';
-  bool _expressAuthEnabled = true;
   // 是否在最近任务中隐藏 PowerBox 卡片（原生侧持久化并立即生效）
   bool _hideFromRecents = false;
+  // 是否开启 1x1 透明悬浮窗保活
+  bool _floatingKeepAlive = false;
+  // 用户去授权悬浮窗后，返回 App 时自动补开开关
+  bool _pendingFloatingEnable = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     loadFileInfo();
     _loadVersionInfo();
-    _loadToolSettings();
+    _loadKeepAliveSettings();
   }
 
-  /// 加载工具相关设置
-  Future<void> _loadToolSettings() async {
-    final expressAuth = await AppSettings.getExpressAuthEnabled();
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && _pendingFloatingEnable) {
+      _pendingFloatingEnable = false;
+      _tryEnableFloatingAfterPermission();
+    }
+  }
+
+  /// 加载桌面小组件保活相关设置
+  Future<void> _loadKeepAliveSettings() async {
     final hideFromRecents = await TaskService.isHideFromRecents();
+    final floatingKeepAlive = await KeepAliveService.isFloatingKeepAlive();
     if (!mounted) return;
     setState(() {
-      _expressAuthEnabled = expressAuth;
       _hideFromRecents = hideFromRecents;
+      _floatingKeepAlive = floatingKeepAlive;
     });
-  }
-
-  /// 切换快递页身份验证
-  Future<void> _setExpressAuth(bool value) async {
-    setState(() {
-      _expressAuthEnabled = value;
-    });
-    await AppSettings.setExpressAuthEnabled(value);
   }
 
   /// 切换「隐藏最近任务卡片」。
@@ -101,6 +114,79 @@ class DataManagementPageState extends State<DataManagementPage> {
     }
   }
 
+  /// 从悬浮窗授权页返回后自动重试开启，避免用户还要再点一次开关。
+  Future<void> _tryEnableFloatingAfterPermission() async {
+    final granted = await KeepAliveService.isOverlayPermissionGranted();
+    if (!mounted) return;
+    if (!granted) {
+      showToast(context, '未授予显示悬浮窗权限');
+      return;
+    }
+    final applied = await KeepAliveService.setFloatingKeepAlive(true);
+    if (!mounted) return;
+    if (applied) {
+      setState(() => _floatingKeepAlive = true);
+      showToast(context, '已开启透明悬浮窗保活');
+    } else {
+      showToast(context, '开启失败，请重试');
+    }
+  }
+
+  /// 切换 1x1 透明悬浮窗保活。
+  ///
+  /// 开启前先确认：悬浮窗只能降低被杀概率，且需要用户手动授予显示悬浮窗权限；
+  /// 没有权限时先跳系统授权页，返回后由 didChangeAppLifecycleState 自动补开。
+  Future<void> _setFloatingKeepAlive(bool value) async {
+    if (value) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text('透明悬浮窗保活'),
+          content: Text(
+            '开启后会在屏幕左上角保留一个 1x1 的透明窗口，'
+            '用于降低应用被系统清理的概率。\n\n'
+            '这不能保证进程不被杀，只是降低概率；需要授予「显示悬浮窗」权限，'
+            '部分系统会提示「PowerBox 正在其他应用上显示」。\n\n'
+            '如果不再需要，可以随时在本页关闭。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text('取消'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text('开启'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+
+      final granted = await KeepAliveService.isOverlayPermissionGranted();
+      if (!mounted) return;
+      if (!granted) {
+        _pendingFloatingEnable = true;
+        await KeepAliveService.requestOverlayPermission();
+        if (!mounted) return;
+        showToast(context, '请授予显示悬浮窗权限，返回后自动开启');
+        return;
+      }
+    }
+
+    final applied = await KeepAliveService.setFloatingKeepAlive(value);
+    if (!mounted) return;
+    if (applied) {
+      setState(() => _floatingKeepAlive = value);
+      showToast(
+        context,
+        value ? '已开启透明悬浮窗保活' : '已关闭透明悬浮窗保活',
+      );
+    } else {
+      showToast(context, '设置失败，请检查悬浮窗权限');
+    }
+  }
+
   Future<void> _loadVersionInfo() async {
     final packageInfo = await PackageInfo.fromPlatform();
     setState(() {
@@ -116,7 +202,46 @@ class DataManagementPageState extends State<DataManagementPage> {
   }
 
 
-  /// 备份打卡和密码数据到根目录 PowerBox_Backups
+  /// 备份恢复入口：弹出「导入 / 导出」选择
+  void _showBackupRestoreDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('备份恢复'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text('导入'),
+              onTap: () {
+                Navigator.pop(dialogContext);
+                _importData();
+              },
+            ),
+            ListTile(
+              title: Text('导出'),
+              onTap: () {
+                Navigator.pop(dialogContext);
+                _backupAllData();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 导入/导出结果提示：底部显示，停留 3 秒
+  void _showBackupToast(String message) {
+    showToast(
+      context,
+      message,
+      atBottom: true,
+      duration: const Duration(seconds: 3),
+    );
+  }
+
+  /// 备份打卡和密码数据到公共下载目录，合并成一个 JSON 文件
   Future<void> _backupAllData() async {
     setState(() {
       _isLoading = true;
@@ -126,19 +251,19 @@ class DataManagementPageState extends State<DataManagementPage> {
       final granted = await FileStorage.isManageStoragePermissionGranted();
       if (!granted) {
         await FileStorage.requestManageStoragePermission();
-        showToast(context, '请授予所有文件访问权限后重试');
+        _showBackupToast('请授予所有文件访问权限后重试');
         return;
       }
 
       final events = await LocalStorage.loadEvents();
       final passwordData = await PasswordStorage.exportPasswordData();
-      await FileStorage.backupAll(
+      final path = await FileStorage.backupAll(
         events: events,
         passwordData: passwordData,
       );
-      showToast(context, '数据已备份到 PowerBox_Backups 文件夹');
+      _showBackupToast('数据已备份到下载目录：${path.split('/').last}');
     } catch (e) {
-      showToast(context, '备份失败: $e');
+      _showBackupToast('备份失败: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -146,6 +271,7 @@ class DataManagementPageState extends State<DataManagementPage> {
     }
   }
 
+  /// 导入统一备份文件，兼容旧版单独的打卡/密码文件。
   Future<void> _importData() async {
     setState(() {
       _isLoading = true;
@@ -156,131 +282,80 @@ class DataManagementPageState extends State<DataManagementPage> {
         type: FileType.any,
         allowMultiple: false,
       );
+      if (result == null || result.files.isEmpty) return;
 
-      if (result != null && result.files.isNotEmpty) {
-        final file = result.files.first;
-
-        if (file.path != null) {
-          if (!file.path!.toLowerCase().endsWith('.json')) {
-            showToast(context, '请选择 JSON 格式的文件');
-            return;
-          }
-
-          final fileObj = File(file.path!);
-          final events = await FileStorage.importData(fileObj);
-
-          await LocalStorage.saveEvents(events);
-
-          showToast(context, '成功导入 ${events.length} 条数据');
-
-          // 通知常驻的首页和统计页重新加载
-          notifyDataChanged();
-
-          loadFileInfo();
-        } else {
-          if (file.bytes != null) {
-            if (!file.name.toLowerCase().endsWith('.json')) {
-              showToast(context, '请选择 JSON 格式的文件');
-              return;
-            }
-
-            final data = utf8.decode(file.bytes!);
-            final jsonData = jsonDecode(data) as Map<String, dynamic>;
-            List<Event> events;
-            
-            if (jsonData.containsKey('events')) {
-              final eventList = jsonData['events'] as List<dynamic>;
-              events = eventList.map((e) => Event.fromJson(e)).toList();
-            } else if (jsonData is List) {
-              events = (jsonData as List).map((e) => Event.fromJson(e)).toList();
-            } else {
-              events = [Event.fromJson(jsonData)];
-            }
-
-            await LocalStorage.saveEvents(events);
-
-            showToast(context, '成功导入 ${events.length} 条数据');
-
-            // 通知常驻的首页和统计页重新加载
-            notifyDataChanged();
-
-            loadFileInfo();
-          } else {
-            showToast(context, '无法读取文件内容');
-          }
+      final file = result.files.first;
+      final String contents;
+      if (file.path != null) {
+        if (!file.path!.toLowerCase().endsWith('.json')) {
+          _showBackupToast('请选择 JSON 格式的文件');
+          return;
         }
+        contents = await File(file.path!).readAsString();
+      } else if (file.bytes != null) {
+        if (!file.name.toLowerCase().endsWith('.json')) {
+          _showBackupToast('请选择 JSON 格式的文件');
+          return;
+        }
+        contents = utf8.decode(file.bytes!);
+      } else {
+        _showBackupToast('无法读取文件内容');
+        return;
       }
-    } catch (e) {
-      showToast(context, '导入失败: $e');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
 
-  void _showImportDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('导入数据'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.event, color: Color(0xFF333333)),
-              title: Text('打卡数据'),
-              subtitle: Text('从 JSON 文件导入事件记录'),
-              onTap: () {
-                Navigator.pop(context);
-                _importData();
-              },
+      final parsed = FileStorage.parseBackupContent(contents);
+      final events = parsed['events'] as List<Event>?;
+      final passwordData = parsed['passwordData'] as Map<String, String>?;
+
+      if (events == null && passwordData == null) {
+        _showBackupToast('文件格式不正确');
+        return;
+      }
+
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text('导入数据'),
+          content: Text(
+            '将导入：\n'
+            '${events != null ? '· 打卡数据 ${events.length} 条\n' : ''}'
+            '${passwordData != null ? '· 密码数据\n' : ''}'
+            '\n导入会覆盖当前对应的数据，是否继续？',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text('取消'),
             ),
-            ListTile(
-              leading: Icon(Icons.lock, color: Color(0xFF333333)),
-              title: Text('密码数据'),
-              subtitle: Text('从加密文件导入密码数据及密钥'),
-              onTap: () {
-                Navigator.pop(context);
-                _importPasswordData();
-              },
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text('导入'),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Future<void> _importPasswordData() async {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
-        allowMultiple: false,
       );
-      if (result != null && result.files.isNotEmpty) {
-        final file = result.files.first;
-        if (file.path != null) {
-          final contents = await File(file.path!).readAsString();
-          final data = jsonDecode(contents) as Map<String, dynamic>;
-          if (!data.containsKey('passwords') ||
-              !data.containsKey('encryptionKey') ||
-              !data.containsKey('encryptionIv')) {
-            showToast(context, '文件格式不正确');
-            return;
-          }
-          await PasswordStorage.importPasswordData(data);
-          showToast(context, '密码数据导入成功');
-          // 通知常驻的密码页重新加载
-          notifyDataChanged();
-        } else {
-          showToast(context, '无法读取文件内容');
-        }
+      if (confirmed != true) return;
+
+      if (events != null) {
+        await LocalStorage.saveEvents(events);
       }
+      if (passwordData != null) {
+        await PasswordStorage.importPasswordData(passwordData);
+      }
+
+      _showBackupToast(
+        '导入成功：'
+        '${events != null ? '打卡 ${events.length} 条' : ''}'
+        '${events != null && passwordData != null ? '，' : ''}'
+        '${passwordData != null ? '密码数据' : ''}',
+      );
+
+      // 通知常驻的首页、统计页和密码页重新加载
+      notifyDataChanged();
+      loadFileInfo();
     } catch (e) {
-      showToast(context, '导入密码数据失败: $e');
+      _showBackupToast('导入失败: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -306,7 +381,7 @@ class DataManagementPageState extends State<DataManagementPage> {
                     SizedBox(height: 24),
                     _buildDataSection(),
                     SizedBox(height: 24),
-                    _buildToolsSection(),
+                    _buildWidgetKeepAliveSection(),
                     SizedBox(height: 24),
                     _buildAboutSection(),
                   ],
@@ -367,91 +442,61 @@ class DataManagementPageState extends State<DataManagementPage> {
   }
 
   Widget _buildFileInfoCard() {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      // 点击整张卡片用文件管理器打开数据文件所在文件夹
-      onTap: _openFileFolder,
-      child: _buildGroupCard(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    return _buildGroupCard(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: Color(0xFF8E8E93),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  '数据文件信息',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF333333),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            if (_fileInfo['exists'] == true)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 18,
-                    color: Color(0xFF8E8E93),
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    '数据文件信息',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF333333),
-                    ),
-                  ),
-                  Spacer(),
-                  Text(
-                    '导出并打开文件夹',
+                  _buildInfoRow('文件路径', '${_fileInfo['path']}'),
+                  SizedBox(height: 8),
+                  _buildInfoRow('文件大小', '${_fileInfo['size']} bytes'),
+                ],
+              )
+            else
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    '暂无数据文件',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF8E8E93),
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right,
-                    size: 18,
-                    color: Color(0xFFC7C7CC),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              if (_fileInfo['exists'] == true)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoRow('文件路径', '${_fileInfo['path']}'),
-                    SizedBox(height: 8),
-                    _buildInfoRow('文件大小', '${_fileInfo['size']} bytes'),
-                  ],
-                )
-              else
-                Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Color(0xFFF5F5F5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '暂无数据文件',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF999999),
-                      ),
+                      color: Color(0xFF999999),
                     ),
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
-  }
-
-  /// 导出数据文件并用系统文件管理器打开所在目录。
-  /// Android 11+ 无法直接访问应用私有目录，因此原生侧会先复制到公共目录 Download/TodoList。
-  Future<void> _openFileFolder() async {
-    final opened = await FileStorage.openDataFolder();
-    if (!mounted) return;
-    if (opened) {
-      showToast(context, '数据文件已复制到 下载/TodoList');
-    } else {
-      showToast(context, '未能打开文件管理器');
-    }
   }
 
   Widget _buildInfoRow(String label, String value) {
@@ -519,56 +564,46 @@ class DataManagementPageState extends State<DataManagementPage> {
     );
   }
 
-  /// 数据管理：备份、导入
+  /// 数据管理：备份恢复（导入 / 导出）
   Widget _buildDataSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle('数据管理'),
         _buildGroupCard(
-          child: Column(
-            children: [
-              _buildSettingTile(
-                icon: Icons.backup_outlined,
-                title: '备份数据',
-                onTap: _backupAllData,
-              ),
-              _buildGroupDivider(),
-              _buildSettingTile(
-                icon: Icons.file_download,
-                title: '导入数据',
-                onTap: _showImportDialog,
-              ),
-            ],
+          child: _buildSettingTile(
+            icon: Icons.restore,
+            title: '备份恢复',
+            onTap: _showBackupRestoreDialog,
           ),
         ),
       ],
     );
   }
 
-  /// 工具：快递页身份验证、隐藏最近任务卡片
-  Widget _buildToolsSection() {
+  /// 桌面小组件保活：隐藏最近任务卡片、透明悬浮窗
+  Widget _buildWidgetKeepAliveSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('工具'),
+        _buildSectionTitle('桌面小组件保活'),
         _buildGroupCard(
           child: Column(
             children: [
-              _buildSwitchTile(
-                icon: Icons.fingerprint,
-                title: '快递页身份验证',
-                subtitle: '进入快递管理时验证身份，关闭后直接查看',
-                value: _expressAuthEnabled,
-                onChanged: _setExpressAuth,
-              ),
-              _buildGroupDivider(),
               _buildSwitchTile(
                 icon: Icons.visibility_off_outlined,
                 title: '隐藏后台任务卡片',
                 subtitle: '从最近任务中隐藏，避免被误滑清理；建议先锁定再开启',
                 value: _hideFromRecents,
                 onChanged: _setHideFromRecents,
+              ),
+              _buildGroupDivider(),
+              _buildSwitchTile(
+                icon: Icons.layers_outlined,
+                title: '透明悬浮窗保活',
+                subtitle: '保留 1x1 透明窗口降低后台被清理概率，需要显示悬浮窗权限',
+                value: _floatingKeepAlive,
+                onChanged: _setFloatingKeepAlive,
               ),
             ],
           ),

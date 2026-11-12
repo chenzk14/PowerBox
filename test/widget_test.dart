@@ -11,20 +11,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:com.powerbox.app/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('PowerBox 可以正常构建', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // 启动检查更新有 2 秒延迟，推进时间避免测试结束时留下 pending timer。
+    await tester.pump(const Duration(seconds: 3));
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // 只要能构建出 MaterialApp，就说明根组件没有在启动阶段抛异常。
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

@@ -62,6 +62,8 @@ void _handleShortcutAction(String action, {int attempt = 0}) {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

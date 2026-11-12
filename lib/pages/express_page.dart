@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/express_model.dart';
-import '../services/app_settings.dart';
-import '../services/auth_service.dart';
 import '../services/express_storage.dart';
 import '../utils/toast_util.dart';
 import '../widgets/circle_action_button.dart';
@@ -23,9 +21,6 @@ class ExpressPage extends StatefulWidget {
 
 class _ExpressPageState extends State<ExpressPage> {
   List<ExpressEntry> _entries = [];
-  bool _isAuthenticated = false;
-  bool _authenticating = false;
-  bool _preparing = true;
   bool _loading = true;
 
   /// 已展开的卡片 id（只展开一个，和密码管理一致）
@@ -35,54 +30,13 @@ class _ExpressPageState extends State<ExpressPage> {
   void initState() {
     super.initState();
     ExpressPage._visibleCount++;
-    _prepare();
+    _loadEntries();
   }
 
   @override
   void dispose() {
     ExpressPage._visibleCount--;
     super.dispose();
-  }
-
-  /// 根据设置决定是否先验证身份
-  Future<void> _prepare() async {
-    final needAuth = await AppSettings.getExpressAuthEnabled();
-    if (!mounted) return;
-
-    if (!needAuth) {
-      await _loadEntries();
-      if (!mounted) return;
-      setState(() {
-        _isAuthenticated = true;
-        _preparing = false;
-      });
-      return;
-    }
-
-    setState(() => _preparing = false);
-    await _authenticate();
-  }
-
-  Future<void> _authenticate() async {
-    if (_authenticating) return;
-    setState(() => _authenticating = true);
-
-    final authenticated = await AuthService.authenticate(
-      reason: '请验证身份以查看快递信息',
-    );
-    if (!mounted) return;
-
-    if (authenticated) {
-      await _loadEntries();
-      if (!mounted) return;
-      setState(() {
-        _isAuthenticated = true;
-        _authenticating = false;
-      });
-    } else {
-      setState(() => _authenticating = false);
-      showToast(context, '认证失败或已取消');
-    }
   }
 
   Future<void> _loadEntries() async {
@@ -185,15 +139,13 @@ class _ExpressPageState extends State<ExpressPage> {
         ),
       ),
       // 与密码管理一样右下角悬浮添加按钮；快递页没有底部导航栏，不用上移
-      floatingActionButton: _isAuthenticated
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: CircleActionButton(
-                onTap: () => _openEdit(),
-                icon: Icons.add,
-              ),
-            )
-          : null,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: CircleActionButton(
+          onTap: () => _openEdit(),
+          icon: Icons.add,
+        ),
+      ),
     );
   }
 
@@ -218,14 +170,6 @@ class _ExpressPageState extends State<ExpressPage> {
   }
 
   Widget _buildBody() {
-    if (_preparing) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (!_isAuthenticated) {
-      return _buildLockedView();
-    }
-
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -242,63 +186,6 @@ class _ExpressPageState extends State<ExpressPage> {
         itemCount: _entries.length,
         itemBuilder: (context, index) => _buildEntryCard(_entries[index]),
       ),
-    );
-  }
-
-  Widget _buildLockedView() {
-    return Center(
-      child: _authenticating
-          ? const CircularProgressIndicator()
-          : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF333333).withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.lock_outline,
-                    size: 36,
-                    color: Color(0xFF333333),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  '快递管理已锁定',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF333333),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '验证身份后查看取件码与地址',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF999999),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: _authenticate,
-                  icon: const Icon(Icons.fingerprint, size: 18),
-                  label: const Text('解锁'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF333333),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ],
-            ),
     );
   }
 

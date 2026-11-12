@@ -9,8 +9,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Color
+import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
+import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 
@@ -22,6 +28,11 @@ import androidx.core.content.ContextCompat
  *    从而能可靠接收系统 ACTION_BATTERY_CHANGED 广播。
  * 2. 每次电池状态变化（充电/放电、电量、温度、电压、电流变化）立即刷新桌面电池小组件。
  * 3. 开机后由 BatteryWidgetProvider / ClockWidgetProvider 的 BOOT_COMPLETED 启动本服务。
+ * 4. 可选：按住一个 1x1 的全透明悬浮窗，进一步降低进程被系统回收的优先级。
+ *
+ * 前台服务类型用 specialUse 而不是 dataSync：
+ * Android 15/16 对 dataSync 有「24 小时内累计最多 6 小时」的硬限制，超时后系统
+ * 会要求服务停止，当天无法再次启动；specialUse 没有该时长限制。
  *
  * 与闹钟方案对比：HyperOS 对后台闹钟策略严格（Android 14+ 新安装应用的
  * SCHEDULE_EXACT_ALARM 默认不授予），前台服务是目前可靠的实时刷新手段。
@@ -31,12 +42,24 @@ import androidx.core.content.ContextCompat
  */
 class BatteryMonitorService : Service() {
 
+    companion object {
+        /** 重新读取悬浮窗开关并立即应用（开关变化时由 Activity 发来） */
+        const val ACTION_UPDATE_OVERLAY = "com.powerbox.app.ACTION_UPDATE_OVERLAY"
+
+        /** 与 MainActivity 共用同一份原生偏好 */
+        private const val PREFS_NAME = "powerbox_prefs"
+        private const val KEY_FLOATING_KEEP_ALIVE = "floating_keep_alive"
+    }
+
     private val NOTIFICATION_ID = 1001
     private val CHANNEL_ID = "powerbox_battery_monitor"
     private val CHANNEL_NAME = "电池监控"
     private val CHANNEL_DESC = "桌面电池小组件实时刷新，低打扰，无声音无震动"
 
     private lateinit var batteryReceiver: BroadcastReceiver
+
+    /** 1x1 透明悬浮窗；null 表示当前没有挂载 */
+    private var overlayView: View? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -62,10 +85,13 @@ class BatteryMonitorService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, buildNotification())
+        // 每次 start 都按最新偏好应用一次；开关变化通过 ACTION_UPDATE_OVERLAY 触发
+        applyOverlay()
         return START_STICKY
     }
 
     override fun onDestroy() {
+        removeOverlay()
         try {
             unregisterReceiver(batteryReceiver)
         } catch (_: Exception) {
@@ -75,6 +101,82 @@ class BatteryMonitorService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    /**
+     * 按偏好和权限决定是否挂载 1x1 透明悬浮窗。
+     *
+     * 说明：
+     * - 悬浮窗只能降低进程被回收的优先级，进程已被杀后它无法复活；
+     * - 1x1、alpha=0.01、不可触摸/不可聚焦，尽量做到用户无感；
+     * - alpha 不用 0：完全透明的窗口在部分 ROM 上会被当作不可见，反而失去意义。
+     */
+    private fun applyOverlay() {
+        val enabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getBoolean(KEY_FLOATING_KEEP_ALIVE, false)
+        if (enabled && canDrawOverlays()) {
+            addOverlay()
+        } else {
+            removeOverlay()
+        }
+    }
+
+    private fun addOverlay() {
+        if (overlayView != null) return
+        if (!canDrawOverlays()) return
+
+        val manager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+        val params = WindowManager.LayoutParams(
+            1,
+            1,
+            type,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = 0
+            y = 0
+            alpha = 0.01f
+        }
+
+        val view = View(this).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+        }
+        try {
+            manager.addView(view, params)
+            overlayView = view
+        } catch (_: Exception) {
+            // 权限被撤销或 ROM 拒绝：静默失败，下次 start 再试
+            overlayView = null
+        }
+    }
+
+    private fun removeOverlay() {
+        val view = overlayView ?: return
+        try {
+            val manager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            manager.removeView(view)
+        } catch (_: Exception) {
+            // 窗口可能已被系统移除，忽略
+        }
+        overlayView = null
+    }
+
+    /** Android 6.0 以下没有悬浮窗特殊权限，直接视为可用 */
+    private fun canDrawOverlays(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.canDrawOverlays(this)
+        } else {
+            true
+        }
+    }
 
     private fun ensureNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

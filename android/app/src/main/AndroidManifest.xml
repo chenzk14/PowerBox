@@ -11,7 +11,15 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- 前台服务（保证电池小组件实时刷新） -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!--
+        specialUse 而不是 dataSync：
+        Android 15/16 对 dataSync 类型有「24 小时内累计最多 6 小时」的硬限制，
+        超时后系统会要求服务停止，当天无法再次启动，表现为「用几小时后突然不刷新」。
+        specialUse 不受该时长限制，适合这种长期低功耗的电池监控场景。
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- 透明悬浮窗保活（SYSTEM_ALERT_WINDOW 属于特殊权限，需要用户手动授予） -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- 开机后启动电池监控服务 -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     
@@ -107,7 +115,11 @@
         <service
             android:name=".BatteryMonitorService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the desktop battery widget in sync with battery broadcasts." />
+        </service>
 
     </application>
     <!-- Required to query activities that can process text, see:

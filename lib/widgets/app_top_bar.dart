@@ -100,7 +100,7 @@ class AppTopBar extends StatelessWidget {
                 border: Border.all(color: Color(0xFFE1E1E1)),
               ),
               child: Icon(
-                Icons.handyman_outlined,
+                Icons.grid_view_rounded,
                 size: 22,
                 color: Color(0xFF333333),
               ),

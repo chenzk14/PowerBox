@@ -28,8 +28,8 @@ class PasswordStorage {
       await prefs.setString(_encryptionIvKey, ivBase64);
     }
     
-    final key = Key(base64.decode(keyBase64!));
-    _iv = IV(base64.decode(ivBase64!));
+    final key = Key(base64.decode(keyBase64));
+    _iv = IV(base64.decode(ivBase64));
     _encrypter = Encrypter(AES(key, mode: AESMode.cbc));
   }
 
