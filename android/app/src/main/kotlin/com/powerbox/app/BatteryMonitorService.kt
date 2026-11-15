@@ -13,6 +13,7 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.Gravity
 import android.view.View
@@ -26,7 +27,8 @@ import androidx.core.content.ContextCompat
  * 职责：
  * 1. 常驻前台（状态栏显示一条低打扰通知），保证进程不被 HyperOS Greezer 杀掉，
  *    从而能可靠接收系统 ACTION_BATTERY_CHANGED 广播。
- * 2. 每次电池状态变化（充电/放电、电量、温度、电压、电流变化）立即刷新桌面电池小组件。
+ * 2. 每次电池状态变化（充电/放电、电量、温度、电压、电流变化）刷新桌面电池小组件，
+ *    最小间隔 10 秒（充电时广播很密集，全量刷新会加重桌面重建 RemoteViews）。
  * 3. 开机后由 BatteryWidgetProvider / ClockWidgetProvider 的 BOOT_COMPLETED 启动本服务。
  * 4. 可选：按住一个 1x1 的全透明悬浮窗，进一步降低进程被系统回收的优先级。
  *
@@ -49,6 +51,15 @@ class BatteryMonitorService : Service() {
         /** 与 MainActivity 共用同一份原生偏好 */
         private const val PREFS_NAME = "powerbox_prefs"
         private const val KEY_FLOATING_KEEP_ALIVE = "floating_keep_alive"
+
+        /**
+         * 桌面小组件刷新的最小间隔（毫秒）。
+         *
+         * 充电时 ACTION_BATTERY_CHANGED 可能几秒触发一次，每次都全量 updateAppWidget
+         * 会让桌面反复重建 RemoteViews，是字号被桌面按新配置重新排版、看起来突然变大的诱因。
+         * 电量/温度/电流这类慢变量 10 秒刷新一次完全够用。
+         */
+        private const val WIDGET_REFRESH_MIN_INTERVAL_MS = 10_000L
     }
 
     private val NOTIFICATION_ID = 1001
@@ -57,6 +68,9 @@ class BatteryMonitorService : Service() {
     private val CHANNEL_DESC = "桌面电池小组件实时刷新，低打扰，无声音无震动"
 
     private lateinit var batteryReceiver: BroadcastReceiver
+
+    /** 上次刷新小组件的 elapsedRealtime；负值保证第一次电池广播一定放行 */
+    private var lastWidgetRefreshElapsed = -WIDGET_REFRESH_MIN_INTERVAL_MS
 
     /** 1x1 透明悬浮窗；null 表示当前没有挂载 */
     private var overlayView: View? = null
@@ -67,7 +81,13 @@ class BatteryMonitorService : Service() {
         batteryReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent?) {
                 if (intent?.action == Intent.ACTION_BATTERY_CHANGED) {
-                    // 电池状态变化：立即刷新电池小组件和时钟小组件的电量
+                    // 电池状态变化：节流后刷新电池小组件和时钟小组件的电量
+                    // （充电时该广播可能几秒一次，全量刷新会加重桌面重建 RemoteViews）
+                    val now = SystemClock.elapsedRealtime()
+                    if (now - lastWidgetRefreshElapsed < WIDGET_REFRESH_MIN_INTERVAL_MS) {
+                        return
+                    }
+                    lastWidgetRefreshElapsed = now
                     BatteryWidgetProvider.updateAll(context)
                     ClockWidgetProvider.updateAll(context)
                 }

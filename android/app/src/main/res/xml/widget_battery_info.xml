@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- PowerBox 电池小组件：五列两排布局，30 分钟自动刷新 -->
+<!-- PowerBox 电池小组件：五列两排布局，30 分钟自动刷新。
+     minWidth 取贴近 5 列单元格的实际宽度（按 5*70-30=320dp 估算），
+     减少桌面把 RemoteViews 从小尺寸整体放大到格子尺寸造成的字号偏差。
+     注意：minHeight 必须保持 140dp，HyperOS 桌面会按它换算行数，
+     调到 150dp 就会被算成 3 行（5x3），所以这里不要动。 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="250dp"
+    android:minWidth="320dp"
     android:minHeight="140dp"
     android:targetCellWidth="5"
     android:targetCellHeight="2"

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="SpUsage">
     <!-- Theme applied to the Android Window while the process is starting when the OS's Dark Mode setting is off -->
     <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <!-- Show a splash screen on the activity. Automatically removed when
@@ -25,33 +25,36 @@
         <item name="android:gravity">center_horizontal</item>
     </style>
 
-    <!-- 电池小组件：数值（大数字居中） -->
+    <!-- 电池小组件：数值（大数字居中）。
+         字号统一用 dp 而非 sp：sp 会乘上桌面进程的 fontScale，
+         系统字体/显示大小一变，已添加的小组件字号就会突然变大且不会自愈，
+         只有移除重加才恢复。用 dp 可让小组件字号保持稳定。 -->
     <style name="BatteryWidgetValue">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">1dp</item>
-        <item name="android:textSize">20sp</item>
+        <item name="android:textSize">19dp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/widget_text</item>
         <item name="android:maxLines">1</item>
         <item name="android:ellipsize">end</item>
     </style>
 
-    <!-- 电池小组件：标签（中文小字） -->
+    <!-- 电池小组件：标签（中文小字），dp 原因同上 -->
     <style name="BatteryWidgetLabel">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:textSize">15sp</item>
+        <item name="android:textSize">14dp</item>
         <item name="android:textColor">@color/widget_subtext</item>
         <item name="android:maxLines">1</item>
     </style>
 
-    <!-- 电池小组件：单位（中文小字） -->
+    <!-- 电池小组件：单位（中文小字），dp 原因同上 -->
     <style name="BatteryWidgetUnit">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">1dp</item>
-        <item name="android:textSize">13sp</item>
+        <item name="android:textSize">12dp</item>
         <item name="android:textColor">@color/widget_subtext</item>
         <item name="android:maxLines">1</item>
     </style>

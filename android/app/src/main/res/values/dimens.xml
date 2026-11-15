@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 全局尺寸（电池/时钟小组件等），统一管理 -->
-<resources>
-    <!-- 时钟小组件：时间主文字大小（参考图：细体大字号） -->
-    <dimen name="clock_time_text_size">65sp</dimen>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="SpUsage">
+    <!-- 时钟小组件：时间主文字大小（参考图：细体大字号）。
+         用 dp 而不是 sp：sp 会乘桌面进程的 fontScale，
+         系统字体/显示大小变化时小组件字号会突然变大且不会自愈。 -->
+    <dimen name="clock_time_text_size">65dp</dimen>
 
     <!-- 时钟小组件：时与分之间的行间距。
          负值用于收紧两行：字体本身带有 ascent/descent 留白，
          单纯排两行会显得分得很开，用负 margin 把"分"往上提，贴近参考图效果。 -->
     <dimen name="clock_time_line_gap">-22dp</dimen>
 
-    <!-- 时钟小组件：副文字（日期/星期/电量）大小 -->
-    <dimen name="clock_meta_text_size">13sp</dimen>
+    <!-- 时钟小组件：副文字（日期/星期/电量）大小（dp 原因同上） -->
+    <dimen name="clock_meta_text_size">13dp</dimen>
 
     <!-- 时钟小组件：根布局内边距（参考图边距很小） -->
     <dimen name="clock_padding">6dp</dimen>
@@ -18,6 +20,9 @@
     <!-- 时钟小组件：黑色圆角背景圆角半径 -->
     <dimen name="clock_bg_radius">20dp</dimen>
 
-    <!-- 时钟小组件：副文字与分之间的上边距（字体自带 descent 留白，这里只补一点点） -->
-    <dimen name="clock_meta_margin_top">1dp</dimen>
+    <!-- 时钟小组件：副文字与分之间的上边距。
+         两行时间本身自带 descent 留白，原本 1dp 会让副文字贴到组件底部；
+         这里用负值把副文字行整体上提（根布局是垂直居中，负 margin 会带动
+         整体重心，实际视觉上移约为该值的一半）。 -->
+    <dimen name="clock_meta_margin_top">-8dp</dimen>
 </resources>
