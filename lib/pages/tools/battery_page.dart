@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../services/battery_settings.dart';
-import '../services/battery_widget_service.dart';
-import '../utils/toast_util.dart';
-import '../widgets/page_back_button.dart';
+import '../../services/battery_settings.dart';
+import '../../services/battery_widget_service.dart';
+import '../../utils/toast_util.dart';
+import '../../widgets/page_back_button.dart';
 
 /// 电池信息页：容量校准 + 当前状态查看
 ///

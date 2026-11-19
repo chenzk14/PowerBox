@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../widgets/page_back_button.dart';
+import '../../widgets/page_back_button.dart';
 import 'battery_page.dart';
-import 'express_page.dart';
+import '../express/express_page.dart';
 
 /// 常用工具：二级入口页，目前只有快递管理
 class ToolsPage extends StatelessWidget {

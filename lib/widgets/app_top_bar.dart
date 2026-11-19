@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../pages/data_management_page.dart';
-import '../pages/tools_page.dart';
+import '../pages/settings/data_management_page.dart';
+import '../pages/tools/tools_page.dart';
 
 /// 全局顶部栏：左侧 App 图标 + 名称 + 副标题，右侧圆形工具与设置按钮。
 ///

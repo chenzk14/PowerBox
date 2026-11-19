@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
-import '../models/password_model.dart';
-import '../services/app_icon_catalog.dart';
-import '../services/data_refresh_notifier.dart';
-import '../services/password_storage.dart';
-import '../utils/toast_util.dart';
-import '../widgets/app_icon_picker.dart';
-import '../widgets/app_top_bar.dart';
-import '../widgets/circle_action_button.dart';
-import '../widgets/swipe_card.dart';
+import '../../models/password_model.dart';
+import '../../services/app_icon_catalog.dart';
+import '../../services/data_refresh_notifier.dart';
+import '../../services/password_storage.dart';
+import '../../utils/toast_util.dart';
+import '../../widgets/app_icon_picker.dart';
+import '../../widgets/app_top_bar.dart';
+import '../../widgets/circle_action_button.dart';
+import '../../widgets/swipe_card.dart';
 
 class PasswordManagerPage extends StatefulWidget {
   const PasswordManagerPage({super.key, this.autoAuthenticate = true});

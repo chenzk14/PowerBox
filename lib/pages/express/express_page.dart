@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/express_model.dart';
-import '../services/express_storage.dart';
-import '../utils/toast_util.dart';
-import '../widgets/circle_action_button.dart';
-import '../widgets/page_back_button.dart';
-import '../widgets/swipe_card.dart';
+import '../../models/express_model.dart';
+import '../../services/express_storage.dart';
+import '../../utils/toast_util.dart';
+import '../../widgets/circle_action_button.dart';
+import '../../widgets/page_back_button.dart';
+import '../../widgets/swipe_card.dart';
 import 'express_edit_page.dart';
 
 /// 快递管理：查看取件码与收货地址

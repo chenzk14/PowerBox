@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-import '../models/event_model.dart';
-import '../services/local_storage.dart';
-import '../widgets/page_back_button.dart';
+import '../../models/event_model.dart';
+import '../../services/local_storage.dart';
+import '../../widgets/page_back_button.dart';
 
 class StatisticsPage extends StatefulWidget {
   const StatisticsPage({super.key});

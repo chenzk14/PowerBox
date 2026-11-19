@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../models/express_parse_rule.dart';
-import '../services/express_storage.dart';
-import '../utils/toast_util.dart';
-import '../widgets/circle_action_button.dart';
-import '../widgets/page_back_button.dart';
-import '../widgets/swipe_card.dart';
+import '../../models/express_parse_rule.dart';
+import '../../services/express_storage.dart';
+import '../../utils/toast_util.dart';
+import '../../widgets/circle_action_button.dart';
+import '../../widgets/page_back_button.dart';
+import '../../widgets/swipe_card.dart';
 import 'express_rule_edit_page.dart';
 
 /// 快递解析规则管理页面

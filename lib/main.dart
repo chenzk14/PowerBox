@@ -1,9 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'pages/express_page.dart';
-import 'pages/home_page.dart';
-import 'pages/password_manager_page.dart';
+import 'pages/express/express_page.dart';
+import 'pages/check_in/home_page.dart';
+import 'pages/password/password_manager_page.dart';
 import 'services/battery_widget_service.dart';
 import 'services/shortcut_service.dart';
 import 'services/update_service.dart';

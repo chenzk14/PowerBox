@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import '../models/event_model.dart';
-import '../services/data_refresh_notifier.dart';
-import '../services/local_storage.dart';
-import '../utils/toast_util.dart';
-import '../widgets/app_top_bar.dart';
+import '../../models/event_model.dart';
+import '../../services/data_refresh_notifier.dart';
+import '../../services/local_storage.dart';
+import '../../utils/toast_util.dart';
+import '../../widgets/app_top_bar.dart';
 import 'statistics_page.dart';
 
 class HomePage extends StatefulWidget {
