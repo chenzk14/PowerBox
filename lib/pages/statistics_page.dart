@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import '../models/event_model.dart';
 import '../services/local_storage.dart';
+import '../widgets/page_back_button.dart';
 
 class StatisticsPage extends StatefulWidget {
   const StatisticsPage({super.key});
@@ -117,6 +118,8 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
       child: Row(
         children: [
           // 返回按钮：从首页进入时显示
+          const PageBackButton(),
+          const SizedBox(width: 12),
 //           if (Navigator.canPop(context)) ...[
 //             GestureDetector(
 //               onTap: () => Navigator.pop(context),
@@ -322,18 +325,6 @@ class StatisticsPageState extends State<StatisticsPage> with TickerProviderState
                     ),
                   ),
                 ],
-              ),
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Color(0xFF333333).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.insights_outlined,
-                  size: 22,
-                  color: Color(0xFF333333),
-                ),
               ),
             ],
           ),

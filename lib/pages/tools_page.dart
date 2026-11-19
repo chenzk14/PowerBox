@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/page_back_button.dart';
 import 'battery_page.dart';
 import 'express_page.dart';
 
@@ -45,12 +46,16 @@ class ToolsPage extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Row(
         children: [
-          const Text(
-            '常用工具',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF333333),
+          const PageBackButton(),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              '常用工具',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF333333),
+              ),
             ),
           ),
         ],

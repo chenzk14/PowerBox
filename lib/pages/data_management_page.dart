@@ -13,6 +13,7 @@ import '../services/password_storage.dart';
 import '../services/data_refresh_notifier.dart';
 import '../services/task_service.dart';
 import '../services/keep_alive_service.dart';
+import '../widgets/page_back_button.dart';
 
 class DataManagementPage extends StatefulWidget {
   const DataManagementPage({super.key});
@@ -394,6 +395,8 @@ class DataManagementPageState extends State<DataManagementPage>
   Widget _buildHeader() {
     return Row(
       children: [
+        const PageBackButton(),
+        const SizedBox(width: 12),
         // 返回按钮：从首页设置入口进入时显示
 //         if (Navigator.canPop(context)) ...[
 //           GestureDetector(

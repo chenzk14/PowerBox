@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'pages/express_page.dart';
 import 'pages/home_page.dart';
@@ -89,6 +90,16 @@ class MyApp extends StatelessWidget {
           backgroundColor: Color(0xFF333333),
           foregroundColor: Colors.white,
           centerTitle: false,
+        ),
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: <TargetPlatform, PageTransitionsBuilder>{
+            // Android 使用普通的「推进、退出」转场，不再使用预测性返回。
+            TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+            TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+          },
         ),
       ),
       home: MainPage(),

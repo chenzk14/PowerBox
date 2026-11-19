@@ -4,6 +4,7 @@ import '../models/express_parse_rule.dart';
 import '../services/express_storage.dart';
 import '../utils/express_parser.dart';
 import '../utils/toast_util.dart';
+import '../widgets/page_back_button.dart';
 
 /// 快递解析规则编辑 / 新增页面
 class ExpressRuleEditPage extends StatefulWidget {
@@ -230,13 +231,21 @@ class _ExpressRuleEditPageState extends State<ExpressRuleEditPage> {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      child: Text(
-        _isEditing ? '编辑解析规则' : '新增解析规则',
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF333333),
-        ),
+      child: Row(
+        children: [
+          const PageBackButton(),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _isEditing ? '编辑解析规则' : '新增解析规则',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF333333),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

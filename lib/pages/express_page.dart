@@ -4,6 +4,7 @@ import '../models/express_model.dart';
 import '../services/express_storage.dart';
 import '../utils/toast_util.dart';
 import '../widgets/circle_action_button.dart';
+import '../widgets/page_back_button.dart';
 import '../widgets/swipe_card.dart';
 import 'express_edit_page.dart';
 
@@ -154,6 +155,8 @@ class _ExpressPageState extends State<ExpressPage> {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: const Row(
         children: [
+          PageBackButton(),
+          SizedBox(width: 12),
           Expanded(
             child: Text(
               '快递管理',

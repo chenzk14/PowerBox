@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/battery_settings.dart';
 import '../services/battery_widget_service.dart';
 import '../utils/toast_util.dart';
+import '../widgets/page_back_button.dart';
 
 /// 电池信息页：容量校准 + 当前状态查看
 ///
@@ -107,12 +108,16 @@ class _BatteryPageState extends State<BatteryPage> {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Row(
         children: [
-          const Text(
-            '电池信息',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF333333),
+          const PageBackButton(),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              '电池信息',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF333333),
+              ),
             ),
           ),
         ],

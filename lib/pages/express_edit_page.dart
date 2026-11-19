@@ -4,6 +4,7 @@ import '../models/express_model.dart';
 import '../services/express_storage.dart';
 import '../utils/express_parser.dart';
 import '../utils/toast_util.dart';
+import '../widgets/page_back_button.dart';
 import 'express_rules_page.dart';
 
 /// 新增/编辑快递记录
@@ -156,13 +157,21 @@ class _ExpressEditPageState extends State<ExpressEditPage> {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      child: Text(
-        _isEditing ? '编辑快递' : '新增快递',
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF333333),
-        ),
+      child: Row(
+        children: [
+          const PageBackButton(),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _isEditing ? '编辑快递' : '新增快递',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF333333),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
